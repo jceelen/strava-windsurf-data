@@ -1,5 +1,5 @@
 /**
- * Google sheets cript for retrieving windsurfing data from Strava
+ * A Google sheets script for retrieving windsurfing data from Strava
  */
 
 function retrieveData() {
