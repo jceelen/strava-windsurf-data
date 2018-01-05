@@ -1,6 +1,5 @@
 /**
  * Set these variables and rename conf.sample to conf.js to get the script working
- * Configuration VARs moved to separate config file.
  */
 
 // General
