@@ -1,0 +1,16 @@
+/**
+ * Set these variables and rename conf.sample to conf.js to get the script working
+ * Configuration VARs moved to separate config file.
+ */
+
+// General
+var DEBUG = true;
+
+// Strava specific
+var CLIENT_ID = '12345';
+var CLIENT_SECRET = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+// Spreadsheet specific
+var SPREADSHEET_NAME = "windsurf-data";
+var SPREADSHEET_ID = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+var SHEET_NAME = "Sheet1";
