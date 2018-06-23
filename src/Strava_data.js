@@ -1,23 +1,147 @@
 /**
  * A Google sheets script for retrieving windsurfing data from Strava
  * retrieveData() is the main function
+ * 
+ * Wanted features: 
+ * Get Description
+ * Add wind
+ * Add tides
+ * Add current directions
+ */
+
+/**
+ * WIP: Main function to call with a timer
+ */
+function main() {
+  // Check status of sheet (header etc)
+  var sheet = getSheet();
+  // WIP: Subprocess retrieves a list of activities and filters them
+  retrieveNewActivities(sheet);
+  sortData(sheet);
+  // WIP: Update activities
+
+
+  return;
+}
+
+/**
+ * WIP: Retrieves new activities from strava
+ */
+function retrieveNewActivities(sheet) {
+  //Access the right sheet and get the date from the last entry
+  var endPoint = 'athlete/activities';
+
+  getStravaList(endPoint, sheet);
+  return;
+}
+
+/**
+ * WIP: Returns an object with multiple items from strava
+ */
+function getStravaList(endPoint, sheet) {
+  var per_page = 30;
+  var page = 0;
+  var result = [];
+  var unixTime = retrieveLastDate(sheet);
+  Logger.log('unixTime = %s', unixTime );
+
+  do {
+    if (DEBUG) Logger.log('Starting do, page = %s', page);
+    page++;
+
+    var params = '?after=' + unixTime + '&per_page=' + per_page + '&page= ' + page;
+    result = callStrava(endPoint, params);
+       
+    // Check if there is any new data, if not, stop and log.
+    if (result.length == 0) {
+      Logger.log("No new data");
+    }
+
+    // Filter only windsurf entries, format the data and put it in var data
+    var data = convertData(result);
+    
+    // Check if there is any new data, if not, stop and log.
+    if (data.length == 0) {
+      Logger.log("No new data with windsurf activities");
+    }
+
+    // Insert the new entries into the sheet
+    if (data.length > 0) {
+      Logger.log("Found %s Windsurfing activities, adding them now!", data.length);
+      insertData(sheet, data);
+    }
+
+  } while (result.length == 30);
+}
+
+
+
+/**
+ * WIP: Returns an object a single item strava
+ */
+function getStravaItem() {
+  // WIP will be a simplified version of StravaList
+}
+
+/**
+ * WIP: Returns the response from Strava
+ */
+function callStrava(endPoint, params){
+  var stravaUrl = 'https://www.strava.com/api/v3/';
+  var url = stravaUrl + endPoint + params;
+  var service = getService_();
+
+  // When retrieving a list, setup extra params for pagination
+  Logger.log("URL: " + url);
+
+  // Check if the authorisation is working
+  if (service.hasAccess()) {
+    Logger.log('Authorization succesfull');
+
+    // Make the call to Strava
+    var response = UrlFetchApp.fetch(url, {
+      headers: {
+        Authorization: 'Bearer ' + service.getAccessToken()
+      }
+    });
+    var result = JSON.parse(response.getContentText());
+    Logger.log('Succesfully retrieved %s items from Strava', result.length);
+    return result;
+    
+  // If there is no authorization, log the authorization URL
+  } else {
+    var authorizationUrl = service.getAuthorizationUrl();
+    Logger.log('Open the following URL and re-run the script: %s',
+        authorizationUrl);
+  }
+}
+
+function sortData(sheet) {
+  sheet = getSheet();
+  Logger.log('Sorting the data')
+  var lastRow = sheet.getLastRow();
+  var lastColumn = sheet.getLastColumn();
+  var range = sheet.getRange(2,1,lastRow,lastColumn);
+  range.sort({column: 1, ascending: true});
+}
+
+/**
+ * ============================= BELOW IS THE WORKING CODE =================
  */
 
 
 /**
- * Gets the latest activities filters for windsurfing and writs it to the spreadsheet
- * TODO: if sheet is empty retrieve all data => ensure header
+ * Gets the latest activities filters for windsurfing and writes it to a spreadsheet
+ * TODO: repeat until finished
  * TODO: build in pagination and remove per_page=200 https://strava.github.io/api/#pagination
  */
 function retrieveData() {
-  
   var service = getService_();
-  // Check if the authorisation is in order
+  // Check if the authorisation is working
   if (service.hasAccess()) {
     //Access the right sheet and get the date from the last entry
-    var sheet = getStravaSheet();
+    var sheet = getSheet();
     var unixTime = retrieveLastDate(sheet);
-
     
     // Get the activities since the last entry
     var url = 'https://www.strava.com/api/v3/athlete/activities?per_page=200&after=' + unixTime;
@@ -63,7 +187,7 @@ function retrieveLastDate(sheet) {
   if (DEBUG) Logger.log("lastRow: " + lastRow);
 
   var unixTime = 631152000; //date of 1-1-1990
-  if (lastRow > 0) {
+  if (lastRow > 1) {
       var dateCell = sheet.getRange(lastRow, 1);
       var dateString = dateCell.getValue();
       if (DEBUG) Logger.log("Datestring: " + dateString);
@@ -103,19 +227,19 @@ function convertData(result) {
         start_lat = result[i].start_latlng[0];
         start_long = result[i].start_latlng[1];
         
-        if (DEBUG) Logger.log("Start Lat: %s", start_lat);
-        if (DEBUG) Logger.log("Start Long: %s", start_long);
-        address_components = getLocation(start_lat, start_long);
-        if (DEBUG) Logger.log("Address Components: %s", address_components);
+        // if (DEBUG) Logger.log("Start Lat: %s", start_lat);
+        // if (DEBUG) Logger.log("Start Long: %s", start_long);
+        //address_components = getLocation(start_lat, start_long);
+        // if (DEBUG) Logger.log("Address Components: %s", address_components);
 
-        city = extractFromAdress(address_components, "locality");
-        if (DEBUG) Logger.log("City: %s", city);
+        //city = extractFromAdress(address_components, "locality");
+        // if (DEBUG) Logger.log("City: %s", city);
 
-        country = extractFromAdress(address_components, "country");
-        if (DEBUG) Logger.log("Country: %s", country);
+        //country = extractFromAdress(address_components, "country");
+        // if (DEBUG) Logger.log("Country: %s", country);
       } 
 
-      if (DEBUG) Logger.log("Description: %s", result[i].description);
+      // if (DEBUG) Logger.log("Description: %s", result[i].description);
 
       // format all data before inserting it into the sheet
       var item = [result[i].start_date_local,
@@ -139,7 +263,7 @@ function convertData(result) {
 /**
  * Returns the sheet defined in the config
  */
-function getStravaSheet() {
+function getSheet() {
   var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = getOrCreateSheet(spreadsheet, SHEET_NAME);
   return sheet;
