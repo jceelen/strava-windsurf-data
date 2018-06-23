@@ -3,7 +3,7 @@
  */
 
 // General
-var DEBUG = true;
+var DEBUG = false;
 
 // Strava specific
 var CLIENT_ID = '12345';
@@ -12,4 +12,4 @@ var CLIENT_SECRET = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 // Spreadsheet specific
 var SPREADSHEET_NAME = "windsurf-data";
 var SPREADSHEET_ID = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-var SHEET_NAME = "Sheet1";
+var SHEET_NAME = "Activities";
