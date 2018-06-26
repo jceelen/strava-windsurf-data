@@ -3,13 +3,29 @@
  */
 
 // General
-var DEBUG = false;
+var ENVIRONMENT = 'prod'; // Set the environment, options are 'sandbox', 'test' and 'prod'
 
 // Strava specific
-var CLIENT_ID = '12345';
+var CLIENT_ID = '123';
 var CLIENT_SECRET = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
 // Spreadsheet specific
-var SPREADSHEET_NAME = "windsurf-data";
-var SPREADSHEET_ID = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-var SHEET_NAME = "Activities";
+var SPREADSHEET_NAME = 'windsurf-data';
+var SPREADSHEET_ID = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+// Configure different environments
+var ENV_SETTINGS = [{
+      test: {
+        envName: 'test',
+        sheetName : 'Activities[T]',
+        header : ['Start Date', 'Strava ID', 'Name', 'Distance', 'Average Speed', 'Max Speed','Latitude', 'Longitude', 'City', 'Country', 'Description']
+        },
+      prod: {
+        envName: 'prod',
+        sheetName : 'Activities',
+        header : ['Start Date', 'Strava ID', 'Name', 'Distance', 'Average Speed', 'Max Speed','Latitude', 'Longitude', 'City', 'Country', 'Description']
+        }
+      }];
+
+// Set invironment specific variables
+var ENV_CONFIG = setEnvConfig(ENVIRONMENT, ENV_SETTINGS);
