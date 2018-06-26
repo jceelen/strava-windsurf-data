@@ -48,7 +48,7 @@ function retrieveNewActivities(sheet) {
 }
 
 /**
- * Loops through the sheet with activities and updates/enriches data
+ * WIP: Loops through the sheet with activities and updates/enriches data
  */
 function updateActivities(ENV_CONFIG, sheet) {
   console.log('Starting updateActivities()');
