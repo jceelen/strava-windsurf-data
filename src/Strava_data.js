@@ -26,7 +26,7 @@ function main(mode) {
   retrieveNewActivities(sheet);
   
   // Update existing activities with extra data
-  updateActivities(sheet);
+  updateActivities(ENV_CONFIG, sheet);
 }
 
 /**
@@ -44,7 +44,65 @@ function retrieveNewActivities(sheet) {
     var row = lastRow+1;
     var column = 1;
     insertData(sheet, activities, row, column);
-  } else {console.info('No new windsurf activities found on Strava.')}
+  } else {console.info('No new windsurf activities found on Strava.');}
+}
+
+/**
+ * WIP: Loops through the sheet with activities and updates/enriches data
+ */
+function updateActivities(ENV_CONFIG, sheet) {
+  console.log('Starting updateActivities()');
+  var activities = getActivities(sheet);
+
+  // List with updates of data
+  updateActivityLocation(ENV_CONFIG, activities, sheet);
+  
+  // Insert the updated data in the spreadsheet at once
+  insertData(sheet, activities, 2, 1);
+}
+
+function updateActivityLocation(ENV_CONFIG, activities, sheet){
+  cityIndex = ENV_CONFIG.header.indexOf('City');
+  countryIndex = ENV_CONFIG.header.indexOf('Country');
+  lat = ENV_CONFIG.header.indexOf('Latitude');
+  lng = ENV_CONFIG.header.indexOf('Longitude');
+  console.log('Found index for City (%s) and Country (%s).', cityIndex, countryIndex);
+  
+  for (var i = 0; i < activities.length; i++) {
+    if(!activities[i][cityIndex]||!activities[i][countryIndex]) {
+      if (activities[i][lat] && activities[i][lng]) {
+        address_components = getLocation(activities[i][lat], activities[i][lng]);      
+
+        // Adding the city and country to the dataset
+        activities[i][cityIndex] = extractFromAdress(address_components, 'locality');
+        activities[i][countryIndex] = extractFromAdress(address_components, 'country');
+
+      } else {
+        console.log({'message' : 'Wanted to add city and country but lat and lng was not available', 
+                     'activity' : activities[i]});
+      }
+    }
+  }
+  console.log({'message' : 'Updated activities with city and country', 'activities' : activities});
+}
+
+/**
+ * Returns all activities in the sheet
+ */
+function getActivities(sheet){
+
+  // Set variables for range
+  var startRow = 2; // Skipping the header
+  var numRows = sheet.getLastRow() - 1; // -1 because startRow is 2
+  var startColumn = 1; // Starting at first column
+  var numColumns = sheet.getLastColumn(); // Last column
+  var dataRange = sheet.getRange(startRow, startColumn, numRows, numColumns);
+  
+  var activities = dataRange.getValues();
+  console.log({'message': 'Returning ' + activities.length + ' activities from ' + sheet.getName() + '.', 
+  'activities': activities});
+  
+  return activities;
 }
 
 /**
@@ -224,7 +282,7 @@ function retrieveLastDate(sheet) {
  * Inserts a two dimentional array into a sheet
  */
 function insertData(sheet, data, row, column) {
-  console.info('Inserting %s new data records, into %s', data.length, sheet);
+  console.info('Inserting %s new data records, into %s', data.length, sheet.getName());
   var numRows = data.length;
   var numColums = data[0].length;
   var range = sheet.getRange(row, column, numRows, numColums);
@@ -243,13 +301,27 @@ function sortData(sheet) {
 
 /**
  * Gets the address of the Lat Long location.
+ * TODO: tidy up the for loop and caching.
  */
 function getLocation(lat, lng) {
+  
+  // Check if location is already cached
+  var cache = CacheService.getScriptCache();
+  var cached = JSON.parse(cache.get('location-for-lat-' + lat + '-lng-' + lng));
+  if (cached != null) {
+    console.log({'message' : 'Found Address in Cache for lat ' + lat + ' and long ' + lng + '.',
+                 'cached' : cached});
+    return cached;
+  }
+
+  // Get new location if not available in cache and put in cache
   var response = Maps.newGeocoder().reverseGeocode(lat, lng); 
   for (var i = 0; i < response.results.length; i++) {
     var result = response.results[i];
-    console.log({'message': 'Returning this address.', 
-    'adress_components': result.address_components});
+    console.log({'message': 'Returning this address.',    
+                 'adress_components': result.address_components});
+    
+    cache.put('location-for-lat-' + lat + '-lng-' + lng, JSON.stringify(result.address_components), 21600);
     return result.address_components;
   }
 }
