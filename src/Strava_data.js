@@ -1,52 +1,32 @@
 /**
  * A Google sheets script for retrieving windsurfing data from Strava
- * retrieveData() is the main function
- * 
- * TODO NEXT: move 'insert data' from getStravaItemList()
- * TODO: solution for manual entries where max speed & lat/long are not available
- * 
- * 
- * 
+ *  
  * Wanted features: 
+ * Conversion from city to spot
  * Get Description
  * Add wind
  * Add tides
- * Add current directions
- * Implement cache for geo? Interestig for development: https://developers.google.com/apps-script/guides/support/best-practices
+ * Add current(tidal) directions
+ * Check existing activities for data updates (user generated content)
  */
-
 
 /**
  * Main function to call with a timer
  */
-function main(test) {
-  if (!test) {
-    console.info('Started main().'); 
-    ENVIRONMENT = 'prod';
-  } else {
-    console.warn('Started main() in testmode.'); 
-    ENVIRONMENT = 'test';
-  }
-  var ENV_CONFIG = setEnvConfig(ENVIRONMENT, ENV_SETTINGS);
-
+function main(mode) {
+  console.info('Started main().');
+  
+  // Get config based on environment
+  var ENV_CONFIG = setEnvConfig(mode);
+   
   // Check status of sheet (header etc)
   var sheet = getSheet(ENV_CONFIG.sheetName, ENV_CONFIG.header);
 
   // Subprocess retrieves a list of activities and filters them
   retrieveNewActivities(sheet);
   
-  //TODO: move to insertdata
-
-  
-  // WIP: Update activities
-}
-
-/**
- * function to call main() in testmode
- */
-function testMain() {
-  var test = true;
-  main(test);
+  // Update existing activities with extra data
+  updateActivities(sheet);
 }
 
 /**
@@ -56,47 +36,52 @@ function retrieveNewActivities(sheet) {
   //Access the right sheet and get the date from the last entry
   var endPoint = 'athlete/activities';
   var lastActivityDate = retrieveLastDate(sheet);
-  getStravaItemList(endPoint, lastActivityDate,sheet);
-
-  // TODO: add filtering  here
+  var items = getStravaItems(endPoint, lastActivityDate,sheet);
+  var activities = prepareActivities(items);
+  
+  if (activities.length > 0) {
+    var lastRow = sheet.getLastRow();
+    var row = lastRow+1;
+    var column = 1;
+    insertData(sheet, activities, row, column);
+  } else {console.info('No new windsurf activities found on Strava.')}
 }
 
 /**
- * WIP: Returns an object with multiple items from strava
- * TODO: separate insertdata
+ * Returns an object with multiple items from strava
  */
-function getStravaItemList(endPoint, lastActivityDate, sheet) {
-
+function getStravaItems(endPoint, lastActivityDate, sheet) {
   var per_page = 30;
   var page = 1;
   var result = [];
-
+  var items = [];
   // Create params and make the strava call
   do {
-    var params = '?after=' + lastActivityDate + '&per_page=' + per_page + '&page= ' + page;
+    var params = '?after=' + lastActivityDate + '&per_page=' + per_page + '&page=' + page;
     result = callStrava(endPoint, params, page);
 
-    // Filter only windsurf entries, format the data and put it in var data
-    var data = convertData(result);
-
-    // Insert the new entries into the sheet
-    if (data.length > 0) insertData(sheet, data);
+    // Add the data to the array items
+    for (var i = 0; i < result.length; i++) {
+      items.push(result[i]);
+    }
 
     // Increment the page to retrieve the next page in the loop
     page++;
 
   } while (result.length == per_page);
+  console.log({'message': 'Returning ' + items.length + ' items from Strava as an array.', 
+                   'items': items});
+  return items;
 }
 
 /**
- * WIP: Returns an object a single item strava
+ * Returns an object a single item strava
  */
 function getStravaItem() {
-  // WIP will be a simplified version of StravaList
 }
 
 /**
- * WIP: Returns the response from Strava
+ * Returns a response from a call to the Strava API
  */
 function callStrava(endPoint, params, page){
   var baseUrl = 'https://www.strava.com/api/v3/';
@@ -114,23 +99,104 @@ function callStrava(endPoint, params, page){
     });
     var result = JSON.parse(response.getContentText());
     
-    console.log({'message': 'Returning ' + result.length + ' items from Strava.', 
+    console.log({'message': 'Returning ' + result.length + ' item(s) from Strava.', 
                    'result': result});
     return result;
     
   // If there is no authorization, log the authorization URL
   } else {
     var authorizationUrl = service.getAuthorizationUrl();
+    // Log error to default logger
+    Logger.log('Authorization failed: open %s to authorize and re-run the script.',
+    authorizationUrl);
+    
+    // Log error to Stackdriver logger
     console.error('Authorization failed: open %s to authorize and re-run the script.',
         authorizationUrl);
   }
 }
 
-function sortData(sheet) {
-  var lastRow = sheet.getLastRow();
-  var lastColumn = sheet.getLastColumn();
-  var range = sheet.getRange(2,1,lastRow,lastColumn);
-  range.sort({column: 1, ascending: true});
+/**
+ * Returns an array of items filterd for windsurf activities converted and formated to insert in the sheet
+ */
+function prepareActivities(items) {
+  console.log('Filtering '+ items.length + ' items windsurf activities and prepare them for insertion.');
+  var activities = [];
+  var start_lat = '';
+  var start_long = '';
+
+  // Loop through the result, filter and prepare the data
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type == 'Windsurf') {
+      console.log({'message': 'Found a windsurf activity in item ' + i +' of ' + items.length + '.', 
+      'items': items[i]});
+      
+      if (items[i].start_latlng !== null) {
+        start_lat = items[i].start_latlng[0];
+        start_long = items[i].start_latlng[1];
+      }
+      // Format all data before inserting it into the sheet
+      var item = [items[i].start_date_local,
+                  items[i].id,
+                  items[i].name,
+                  items[i].distance/1000,
+                  items[i].average_speed/0.27777777777778,
+                  items[i].max_speed/0.27777777777778,
+                  start_lat,
+                  start_long];
+      activities.push(item);
+    }
+  }
+  return activities;
+}
+
+/**
+ * Sets the global configuration based on the environment
+ */
+function setEnvConfig(mode){
+  if (mode == 'test') {
+    console.warn('Running in testmode.'); 
+    environment = 'test';
+  } else {
+    environment = 'prod';
+  }
+  var config = ENV_SETTINGS[0][environment];
+  console.log({'message': 'Loaded configuration settings for ' + environment + '.', 
+                'ENV_CONFIG': config});
+  return config;
+}
+
+/**
+ * Returns the sheet defined in the config
+ */
+function getSheet(sheetName, header) {
+  var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = getOrCreateSheet(spreadsheet, sheetName);
+  ensureHeader(header, sheet);
+  return sheet;
+}
+
+/**
+ * Gets or creates a sheet in the spreadsheet document with the correct name
+ */
+function getOrCreateSheet(spreadsheet, sheetName) {
+  var sheet = spreadsheet.getSheetByName(sheetName);
+  if (!sheet) {
+    console.warn('Sheet %s does not exists, creating new sheet.', sheetName);
+    sheet = spreadsheet.insertSheet(sheetName);
+  }
+  return sheet;
+}
+
+/**
+ * Checks for a header and create one if not available
+ */
+function ensureHeader(header, sheet) {
+  // Only add the header if sheet is empty
+  if (sheet.getLastRow() == 0) {
+    console.warn('Found no header in the sheet, adding header.');
+    sheet.appendRow(header);
+  }
 }
 
 /**
@@ -155,115 +221,24 @@ function retrieveLastDate(sheet) {
 }
 
 /**
- * Returns an array of windsurf items converted and formated to insert in the sheet
- * 
- * TODO: Fix descriptions as described here: You can use the Activities API to get activity 
- * descriptions -  * https://developers.strava.com/playground/#/Activities/getActivityById. 
- * If one exists, it will be there. Note that if you are getting activities in bulk such as 
- * https://developers.strava.com/playground/#/Activities/getLoggedInAthleteActivities, you 
- * only get a summary representation which does not include the description. For mout about 
- * summary vs. detail representations, see https://strava.github.io/api/v3/activities/.
- * 
+ * Inserts a two dimentional array into a sheet
  */
-function convertData(result) {
-  console.log('Filtering result for windsurf activities.');
-  var data = [];
-  var start_lat = '';
-  var start_long = '';
-
-  // Loop through the result
-  for (var i = 0; i < result.length; i++) {
-    if (result[i].type == 'Windsurf') {
-      console.log({'message': 'Found a windsurf activity in result ' + i +' of ' + result.length + '.', 
-      'activity': result[i]});
-      
-      if (result[i].start_latlng !== null) {
-        start_lat = result[i].start_latlng[0];
-        start_long = result[i].start_latlng[1];
-      }
-      // format all data before inserting it into the sheet
-      var item = [result[i].start_date_local,
-                  result[i].id,
-                  result[i].name,
-                  result[i].distance/1000,
-                  result[i].average_speed/0.27777777777778,
-                  result[i].max_speed/0.27777777777778,
-                  start_lat,
-                  start_long];
-      data.push(item);
-    }
-  }
-  return data;
-}
-
-/**
- * WIP: loops through the activities and updates/enriches data
- */
-function updateActivities() {
-        // Get the location address from the start_latlng
-        var city = '';
-        var country = '';
-
-          
-          // console.log('Start Lat: %s', start_lat);
-          // console.log('Start Long: %s', start_long);
-          //address_components = getLocation(start_lat, start_long);
-          // console.log('Address Components: %s', address_components);
-  
-          //city = extractFromAdress(address_components, 'locality');
-          // console.log('City: %s', city);
-  
-          //country = extractFromAdress(address_components, 'country');
-          // console.log('Country: %s', country);
-        
-  
-        // console.log('Description: %s', result[i].description);
-}
-
-/**
- * Returns the sheet defined in the config
- */
-function getSheet(sheetName, header) {
-  var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var sheet = getOrCreateSheet(spreadsheet, sheetName);
-  ensureHeader(header, sheet);
-  return sheet;
-}
-
-/**
- * Creates a header if needed and inserts the data
- * TODO: move header values to config
- */
-function insertData(sheet, data) {
-  console.info('Inserting %s windsurfing activitie(s), into %s', data.length, sheet);
-  
-  // Insert the data on the last row
-  var lastRow = sheet.getLastRow();
-  var range = sheet.getRange(lastRow+1,1,data.length,8);
+function insertData(sheet, data, row, column) {
+  console.info('Inserting %s new data records, into %s', data.length, sheet);
+  var numRows = data.length;
+  var numColums = data[0].length;
+  var range = sheet.getRange(row, column, numRows, numColums);
   range.setValues(data);
 }
 
 /**
- * Checks for a header and create one if not available
+ * Sorts all rows of the sheet based on column 1
  */
-function ensureHeader(header, sheet) {
-  // Only add the header if sheet is empty
-  if (sheet.getLastRow() == 0) {
-    console.warn('Found no header in the sheet, adding header.');
-    sheet.appendRow(header);
-  }
-}
-
-/**
- * Gets or creates a sheet in the spreadsheet document with the correct name
- */
-function getOrCreateSheet(spreadsheet, sheetName) {
-  var sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    console.warn('Sheet %s does not exists, creating new sheet.', sheetName);
-    sheet = spreadsheet.insertSheet(sheetName);
-  }
-  return sheet;
+function sortData(sheet) {
+  var lastRow = sheet.getLastRow();
+  var lastColumn = sheet.getLastColumn();
+  var range = sheet.getRange(2,1,lastRow,lastColumn);
+  range.sort({column: 1, ascending: true});
 }
 
 /**
@@ -286,15 +261,14 @@ function extractFromAdress(components, type){
   for (var i=0; i<components.length; i++)
       for (var j=0; j<components[i].types.length; j++)
           if (components[i].types[j]==type) return components[i].long_name;
+  // WIP: remove return?
   return '';
 }
 
 /**
- * Sets the global configuration based on the environment
+ * Calls main() in testmode
  */
-function setEnvConfig(environment, env_settings){
-  var config = env_settings[0][environment];
-  console.info({'message': 'Loaded configuration settings for ' + environment + '.', 
-                'ENV_CONFIG': config});
-  return config;
+function testMain() {
+  var mode = 'test';
+  main(mode);
 }
