@@ -21,7 +21,7 @@ function main(mode) {
    
   // Check status of sheet (header etc)
   var sheet = getSheet(ENV_CONFIG.sheetName, ENV_CONFIG.header);
-
+  
   // Subprocess retrieves a list of activities and filters them
   retrieveNewActivities(sheet);
   
@@ -55,23 +55,23 @@ function updateActivities(ENV_CONFIG, sheet) {
   var activities = getActivities(sheet);
 
   // List with updates of data
-  updateActivityLocation(ENV_CONFIG, activities, sheet);
+  updateActivityLocation(ENV_CONFIG.header, activities, sheet);
   
   // Insert the updated data in the spreadsheet at once
   insertData(sheet, activities, 2, 1);
 }
 
-function updateActivityLocation(ENV_CONFIG, activities, sheet){
-  cityIndex = ENV_CONFIG.header.indexOf('City');
-  countryIndex = ENV_CONFIG.header.indexOf('Country');
-  lat = ENV_CONFIG.header.indexOf('Latitude');
-  lng = ENV_CONFIG.header.indexOf('Longitude');
+function updateActivityLocation(header, activities, sheet){
+  cityIndex = header.indexOf('City');
+  countryIndex = header.indexOf('Country');
+  latIndex = header.indexOf('Latitude');
+  lngIndex = header.indexOf('Longitude');
   console.log('Found index for City (%s) and Country (%s).', cityIndex, countryIndex);
   
   for (var i = 0; i < activities.length; i++) {
     if(!activities[i][cityIndex]||!activities[i][countryIndex]) {
-      if (activities[i][lat] && activities[i][lng]) {
-        address_components = getLocation(activities[i][lat], activities[i][lng]);      
+      if (activities[i][latIndex] && activities[i][lngIndex]) {
+        address_components = getLocation(activities[i][latIndex], activities[i][lngIndex]);      
 
         // Adding the city and country to the dataset
         activities[i][cityIndex] = extractFromAdress(address_components, 'locality');
@@ -254,8 +254,16 @@ function ensureHeader(header, sheet) {
   if (sheet.getLastRow() == 0) {
     console.warn('Found no header in the sheet, adding header.');
     sheet.appendRow(header);
+  } else {
+      var headerString = JSON.stringify(header);
+      var sheetHeaderString = JSON.stringify(getSheetHeader(sheet)[0]);
+      if (sheetHeaderString != headerString) {
+        console.warn({'message' : 'Found incorrect header in the sheet, updating header.', 
+                      'header' : header});
+        insertData(sheet, [header], 1 , 1);
+      }
+    }
   }
-}
 
 /**
  * Returns the date of the last entry in unixTime.
@@ -304,7 +312,6 @@ function sortData(sheet) {
  * TODO: tidy up the for loop and caching.
  */
 function getLocation(lat, lng) {
-  
   // Check if location is already cached
   var cache = CacheService.getScriptCache();
   var cached = JSON.parse(cache.get('location-for-lat-' + lat + '-lng-' + lng));
@@ -319,8 +326,7 @@ function getLocation(lat, lng) {
   for (var i = 0; i < response.results.length; i++) {
     var result = response.results[i];
     console.log({'message': 'Returning this address.',    
-                 'adress_components': result.address_components});
-    
+                 'adress_components': result.address_components});    
     cache.put('location-for-lat-' + lat + '-lng-' + lng, JSON.stringify(result.address_components), 21600);
     return result.address_components;
   }
@@ -335,6 +341,15 @@ function extractFromAdress(components, type){
           if (components[i].types[j]==type) return components[i].long_name;
   // WIP: remove return?
   return '';
+}
+
+/**
+ * Returns an 2D array of values from the first row, the header
+ */
+function getSheetHeader(sheet) {
+  var lastColumn = sheet.getLastColumn();
+  var sheetHeader = sheet.getRange(1, 1, 1, lastColumn).getValues();
+  return sheetHeader;
 }
 
 /**
