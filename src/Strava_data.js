@@ -1,13 +1,5 @@
 /**
  * A Google sheets script for retrieving windsurfing data from Strava
- *  
- * Wanted features: 
- * Conversion from city to spot
- * Get Description
- * Add wind
- * Add tides
- * Add current(tidal) directions
- * Check existing activities for data updates (user generated content)
  */
 
 /**
@@ -21,7 +13,7 @@ function main(mode) {
    
   // Check status of sheet (header etc)
   var sheet = getSheet(ENV_CONFIG.sheetName, ENV_CONFIG.header);
-  
+
   // Subprocess retrieves a list of activities and filters them
   retrieveNewActivities(sheet);
   
