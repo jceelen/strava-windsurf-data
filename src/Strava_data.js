@@ -1,9 +1,7 @@
 /**
  * A Google sheets script for retrieving windsurfing data from Strava
- */
-
-/**
- * Main function to call with a timer
+ * Update conf.js
+ * Call main() with a timer to run the script.
  */
 function main(mode) {
   console.info('Started main().');
@@ -25,57 +23,108 @@ function main(mode) {
  * Retrieves new activities from strava
  */
 function retrieveNewActivities(sheet) {
+  console.info('Checking for new activities...');
   //Access the right sheet and get the date from the last entry
   var endPoint = 'athlete/activities';
   var lastActivityDate = retrieveLastDate(sheet);
   var items = getStravaItems(endPoint, lastActivityDate,sheet);
-  var activities = prepareActivities(items);
-  
+  var activities = [];
+
+  if (items.length > 0) {
+    activities = prepareActivities(items);    
+  } else {
+    console.info('Found no new activities Strava.');
+    return;
+  }
+
   if (activities.length > 0) {
     var lastRow = sheet.getLastRow();
     var row = lastRow+1;
     var column = 1;
     insertData(sheet, activities, row, column);
-  } else {console.info('No new windsurf activities found on Strava.');}
+  } else {console.info('No new windsurf activities found in Strava activities.');}
 }
 
 /**
- * WIP: Loops through the sheet with activities and updates/enriches data
+ * Loops through the sheet with activities and updates/enriches data
  */
 function updateActivities(ENV_CONFIG, sheet) {
-  console.log('Starting updateActivities()');
-  var activities = getActivities(sheet);
+  // Temp time experiment
+  
+  
+  
+  console.info('Updating activities...');
+  var data = {activities : getActivities(sheet)};
 
   // List with updates of data
-  updateActivityLocation(ENV_CONFIG.header, activities, sheet);
-  
+  data = updateActivityLocation(ENV_CONFIG.header, data, sheet);
+  //data = updateActivityUserGeneratedContent(ENV_CONFIG.header, data, sheet);
   // Insert the updated data in the spreadsheet at once
-  insertData(sheet, activities, 2, 1);
+  if (data.updated) insertData(sheet, data.activities, 2, 1);
+  
 }
 
-function updateActivityLocation(header, activities, sheet){
-  cityIndex = header.indexOf('City');
-  countryIndex = header.indexOf('Country');
-  latIndex = header.indexOf('Latitude');
-  lngIndex = header.indexOf('Longitude');
-  console.log('Found index for City (%s) and Country (%s).', cityIndex, countryIndex);
+/**
+ * Updates the activities array with the description from Strava
+ */
+function updateActivityUserGeneratedContent(header, data, sheet) {
+  var activities = data.activities;
+  var stravaIdIndex = header.indexOf('Strava ID');
+  var nameIndex = header.indexOf('Name');
+  var descriptionIndex = header.indexOf('Description');
+  var updatedActivities = 0;
   
+  var label = 'For Loop';
+  console.time(label);
+
+  for (var i = 0; i < activities.length; i++) {
+    
+    var endPoint = 'activities/' + activities[i][stravaIdIndex];
+    var params = '?include_all_efforts';
+    var activity = getStravaItem(endPoint, params);
+    
+    // Adding name and description to the dataset
+    activities[i][nameIndex] = activity.name;
+    activities[i][descriptionIndex] = activity.description;
+    data.updated = true;
+    updatedActivities++;
+  }
+  console.timeEnd(label);
+  console.log('Updated user generated content in %s activities.', updatedActivities);
+  return data;
+}
+
+/**
+ * Updates the activities array with City and Country
+ */
+function updateActivityLocation(header, data){
+  var activities = data.activities;
+  var cityIndex = header.indexOf('City');
+  var countryIndex = header.indexOf('Country');
+  var latIndex = header.indexOf('Latitude');
+  var lngIndex = header.indexOf('Longitude');
+  var updatedActivities = 0;
+  
+  // Loop through the data and check for missing cities and countries
   for (var i = 0; i < activities.length; i++) {
     if(!activities[i][cityIndex]||!activities[i][countryIndex]) {
       if (activities[i][latIndex] && activities[i][lngIndex]) {
         address_components = getLocation(activities[i][latIndex], activities[i][lngIndex]);      
-
+        
         // Adding the city and country to the dataset
         activities[i][cityIndex] = extractFromAdress(address_components, 'locality');
         activities[i][countryIndex] = extractFromAdress(address_components, 'country');
-
+        data.updated = true;
+        updatedActivities++;
       } else {
-        console.log({'message' : 'Wanted to add city and country but lat and lng was not available', 
+        var row = i + 2;
+        console.warn({'message' : 'Skipped activity on row '+ row +' because lat and lng are missing.', 
                      'activity' : activities[i]});
       }
     }
   }
-  console.log({'message' : 'Updated activities with city and country', 'activities' : activities});
+  console.log('Updated city and country in %s activities.', updatedActivities);
+  return data;
 }
 
 /**
@@ -91,20 +140,31 @@ function getActivities(sheet){
   var dataRange = sheet.getRange(startRow, startColumn, numRows, numColumns);
   
   var activities = dataRange.getValues();
-  console.log({'message': 'Returning ' + activities.length + ' activities from ' + sheet.getName() + '.', 
+  console.log({'message': 'Returned ' + activities.length + ' activities from ' + sheet.getName() + '.', 
   'activities': activities});
   
   return activities;
 }
 
 /**
- * Returns an object with multiple items from strava
+ * Returns an object a single item strava
  */
-function getStravaItems(endPoint, lastActivityDate, sheet) {
+function getStravaItem(endPoint, params) {
+  var item = callStrava(endPoint, params);
+  return item;
+}
+
+/**
+ * Returns an object with multiple items from strava 
+ * Condition: no call should be made if the activity date of the last
+ * call (stored as property) is the same or before the current last activity
+ */
+function getStravaItems(endPoint, lastActivityDate) {
   var per_page = 30;
   var page = 1;
   var result = [];
   var items = [];
+
   // Create params and make the strava call
   do {
     var params = '?after=' + lastActivityDate + '&per_page=' + per_page + '&page=' + page;
@@ -114,26 +174,17 @@ function getStravaItems(endPoint, lastActivityDate, sheet) {
     for (var i = 0; i < result.length; i++) {
       items.push(result[i]);
     }
-
     // Increment the page to retrieve the next page in the loop
     page++;
 
   } while (result.length == per_page);
-  console.log({'message': 'Returning ' + items.length + ' items from Strava as an array.', 
-                   'items': items});
   return items;
-}
-
-/**
- * Returns an object a single item strava
- */
-function getStravaItem() {
 }
 
 /**
  * Returns a response from a call to the Strava API
  */
-function callStrava(endPoint, params, page){
+function callStrava(endPoint, params){
   var baseUrl = 'https://www.strava.com/api/v3/';
   var url = baseUrl + endPoint + params;
   var service = getService_();
@@ -141,15 +192,13 @@ function callStrava(endPoint, params, page){
   // Check if the authorisation is working
   if (service.hasAccess()) {
     // Make the call to Strava
-    console.log('Going to make a call to Strava for page %s', page);
     var response = UrlFetchApp.fetch(url, {
       headers: {
         Authorization: 'Bearer ' + service.getAccessToken()
       }
     });
     var result = JSON.parse(response.getContentText());
-    
-    console.log({'message': 'Returning ' + result.length + ' item(s) from Strava.', 
+    if (result.length > 0) console.log({'message': 'Retrieved ' + result.length + ' item(s) from Strava.', 
                    'result': result});
     return result;
     
@@ -170,7 +219,6 @@ function callStrava(endPoint, params, page){
  * Returns an array of items filterd for windsurf activities converted and formated to insert in the sheet
  */
 function prepareActivities(items) {
-  console.log('Filtering '+ items.length + ' items windsurf activities and prepare them for insertion.');
   var activities = [];
   var start_lat = '';
   var start_long = '';
@@ -178,7 +226,7 @@ function prepareActivities(items) {
   // Loop through the result, filter and prepare the data
   for (var i = 0; i < items.length; i++) {
     if (items[i].type == 'Windsurf') {
-      console.log({'message': 'Found a windsurf activity in item ' + i +' of ' + items.length + '.', 
+      console.log({'message': 'Found a windsurf activity on index ' + i +' of ' + items.length + ' items.', 
       'items': items[i]});
       
       if (items[i].start_latlng !== null) {
@@ -197,6 +245,7 @@ function prepareActivities(items) {
       activities.push(item);
     }
   }
+  console.log('Filtered '+ items.length + ' items and found ' + activities.length + ' windsurf activities. Prepared them for insertion.');
   return activities;
 }
 
@@ -223,18 +272,18 @@ function getSheet(sheetName, header) {
   var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = getOrCreateSheet(spreadsheet, sheetName);
   ensureHeader(header, sheet);
-  return sheet;
+  return sheet;  
 }
-
 /**
  * Gets or creates a sheet in the spreadsheet document with the correct name
  */
 function getOrCreateSheet(spreadsheet, sheetName) {
   var sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) {
-    console.warn('Sheet %s does not exists, creating new sheet.', sheetName);
+    console.warn('Sheet %s does not exists, created new sheet.', sheetName);
     sheet = spreadsheet.insertSheet(sheetName);
   }
+  console.log('Returned the sheet: ' + sheetName);
   return sheet;
 }
 
@@ -243,19 +292,20 @@ function getOrCreateSheet(spreadsheet, sheetName) {
  */
 function ensureHeader(header, sheet) {
   // Only add the header if sheet is empty
+  var headerString = JSON.stringify(header);
+  var sheetHeaderString = JSON.stringify(getSheetHeader(sheet)[0]);
+
   if (sheet.getLastRow() == 0) {
-    console.warn('Found no header in the sheet, adding header.');
+    console.warn('Found no header, added header.');
     sheet.appendRow(header);
-  } else {
-      var headerString = JSON.stringify(header);
-      var sheetHeaderString = JSON.stringify(getSheetHeader(sheet)[0]);
-      if (sheetHeaderString != headerString) {
-        console.warn({'message' : 'Found incorrect header in the sheet, updating header.', 
-                      'header' : header});
-        insertData(sheet, [header], 1 , 1);
-      }
+  } else if (sheetHeaderString != headerString) {
+    insertData(sheet, [header], 1 , 1);
+    console.warn({'message' : 'Found incorrect header in the sheet, updated header.', 
+                  'header' : header});
+    } else {
+      console.log('Found correct header in the sheet.');
     }
-  }
+}
 
 /**
  * Returns the date of the last entry in unixTime.
@@ -274,7 +324,7 @@ function retrieveLastDate(sheet) {
       unixTime = date/1000;
    }
 
-   console.log('Returning the datestring converted to unixtime: ' + unixTime);
+   console.log('Returned the datestring converted to unixtime: ' + unixTime);
    return unixTime;
 }
 
@@ -282,11 +332,11 @@ function retrieveLastDate(sheet) {
  * Inserts a two dimentional array into a sheet
  */
 function insertData(sheet, data, row, column) {
-  console.info('Inserting %s new data records, into %s', data.length, sheet.getName());
   var numRows = data.length;
   var numColums = data[0].length;
   var range = sheet.getRange(row, column, numRows, numColums);
   range.setValues(data);
+  console.info('Inserted %s data records into %s', data.length, sheet.getName());
 }
 
 /**
@@ -308,7 +358,7 @@ function getLocation(lat, lng) {
   var cache = CacheService.getScriptCache();
   var cached = JSON.parse(cache.get('location-for-lat-' + lat + '-lng-' + lng));
   if (cached != null) {
-    console.log({'message' : 'Found Address in Cache for lat ' + lat + ' and long ' + lng + '.',
+    console.log({'message' : 'Found address for ' + lat + ', ' + lng + ' in cache.',
                  'cached' : cached});
     return cached;
   }
@@ -317,9 +367,9 @@ function getLocation(lat, lng) {
   var response = Maps.newGeocoder().reverseGeocode(lat, lng); 
   for (var i = 0; i < response.results.length; i++) {
     var result = response.results[i];
-    console.log({'message': 'Returning this address.',    
-                 'adress_components': result.address_components});    
     cache.put('location-for-lat-' + lat + '-lng-' + lng, JSON.stringify(result.address_components), 21600);
+    console.log({'message': 'Retrieved address for ' + lat + ', ' + lng + ' from Google Maps and added it to cache.',    
+                 'adress_components': result.address_components});    
     return result.address_components;
   }
 }
@@ -331,7 +381,6 @@ function extractFromAdress(components, type){
   for (var i=0; i<components.length; i++)
       for (var j=0; j<components[i].types.length; j++)
           if (components[i].types[j]==type) return components[i].long_name;
-  // WIP: remove return?
   return '';
 }
 
