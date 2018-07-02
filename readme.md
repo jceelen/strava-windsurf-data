@@ -8,6 +8,7 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 * Keeps updating user generated content from Strava like activity name and description
 
 ## Wanted features ##
+ * Change to spreadsheet add-on for more users
  * Add switches for data updates in config
  * Improve speed/performance of updateActivityUserGeneratedContent()
  * Rename activities to sessions in code (activities are Strava, sessions this script uses sessions)
