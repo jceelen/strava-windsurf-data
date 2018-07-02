@@ -4,12 +4,21 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 
 ## Features ##
 * Creates sheet automatically and adds header
-* Gets all activities from strava, filters them for `windsurfing` and adds them to a sheet.
+* Gets all activities from Strava, filters them for `windsurfing` and adds them to a sheet.
+* Keeps updating user generated content from Strava like activity name and description
 
 ## Wanted features ##
- * Get Description
- * Check existing activities for data updates (user generated content)
+ * Add switches for data updates in config
+ * Improve speed/performance of updateActivityUserGeneratedContent()
+ * Rename activities to sessions in code (activities are Strava, sessions this script uses sessions)
+ * Update getStravaItems() to support other items (the loop is specifically for activities)
  * Conversion from city to spot
- * Add wind
+ * Add wind:
+    * [World Weather Online](https://www.worldweatheronline.com)
+    * [Apixu](https://www.apixu.com/my/)
+    * [KNMI (Dutch)](https://www.knmi.nl/kennis-en-datacentrum/achtergrond/data-ophalen-vanuit-een-script)
+    * [KNMI Noordzee Stations (Dutch)](https://www.knmi.nl/nederland-nu/klimatologie/daggegevens_Noordzee)
+    * [Surfcheck EU&NL](http://weerlive.nl/delen.php)
+    * [RijksWaterStaat (Dutch)](https://www.rijkswaterstaat.nl/rws/opendata/)
  * Add tides
  * Add current(tidal) directions
