@@ -190,7 +190,18 @@ function callStrava(endPoint, params){
   var service = getStravaService();
 
   // Check if the authorisation is working
-  if (service.hasAccess()) {
+  if (!service.hasAccess()) {
+    var authorizationUrl = service.getAuthorizationUrl();
+    // Log error to default logger
+    Logger.log('Authorization failed! Open the following URL to authorize and re-run the script: %s',
+    authorizationUrl);
+
+    // Log error to Stackdriver logger
+    console.error('Authorization failed! Open the following URL to authorize and re-run the script: %s',
+    authorizationUrl);
+
+    throw new Error('Missing Strava authorization, check log for details.');
+  } else {  
     // Make the call to Strava
     var response = UrlFetchApp.fetch(url, {
       headers: {
@@ -203,17 +214,6 @@ function callStrava(endPoint, params){
     return result;
     
   // If there is no authorization, log the authorization URL
-  } else {
-    var authorizationUrl = service.getAuthorizationUrl();
-    // Log error to default logger
-    Logger.log('Authorization failed! Open the following URL to authorize and re-run the script: %s',
-    authorizationUrl);
-    
-    // Log error to Stackdriver logger
-    console.error('Authorization failed! Open the following URL to authorize and re-run the script: %s',
-    authorizationUrl);
-
-    //throw new Error('Authorization failed! Open the following URL to authorize and re-run the script: %s', authorizationUrl);
   }
 }
 

@@ -30,7 +30,7 @@
 function onOpen(e) {
   SpreadsheetApp.getUi()
       .createAddonMenu()
-      .addItem('Show Sidebar', 'showSidebar')
+      .addItem('Authorize with Strava', 'showSidebar')
       .addToUi();
 }
 
@@ -88,6 +88,8 @@ function getStravaProfile() {
       Authorization: 'Bearer ' + service.getAccessToken()
     }
   });
+  console.log({'message': 'Retrieved Athlete Profile from Strava.', 
+                   'result': response});
   return JSON.parse(response.getContentText());
 }
 

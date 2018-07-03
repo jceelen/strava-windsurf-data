@@ -12,7 +12,6 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 
 ## Wanted features ##
  * Change to spreadsheet [add-on](https://developers.google.com/apps-script/add-ons/) for more users.
-    * Use catch & throw for error in main script
     * Authorization for strava in pop-ups instead of sidebar
     * Call script from menu
     * Remove Sheet1 if empty

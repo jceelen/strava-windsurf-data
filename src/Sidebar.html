@@ -28,7 +28,7 @@
    </div>
    <div ng-show="sidebar.isSignedIn">
      <div>
-       <p>Hello {{sidebar.user.login || '...' }}</p>
+       <p>Hello {{sidebar.user.firstname || '...' }}</p>
        <button ng-click="sidebar.signOut()">Sign out</button>
      </div>
    </div>

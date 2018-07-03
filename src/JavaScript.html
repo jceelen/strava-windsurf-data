@@ -54,8 +54,8 @@
       // Watch for changes to isSignedIn.
       $scope.$watch('sidebar.isSignedIn', function(isSignedIn) {
         if (isSignedIn) {
-          script.getStravaProfile().then(function(username) {
-            self.user = username;
+          script.getStravaProfile().then(function(user) {
+            self.user = user;
           }, self.handleError);
         } else {
           self.user = null;
