@@ -48,19 +48,19 @@ function retrieveNewActivities(sheet) {
 /**
  * Loops through the sheet with activities and updates/enriches data
  */
-function updateActivities(ENV_CONFIG, sheet) {
-  // Temp time experiment
-  
-  
-  
-  console.info('Updating activities...');
-  var data = {activities : getActivities(sheet)};
-
-  // List with updates of data
-  data = updateActivityLocation(ENV_CONFIG.header, data, sheet);
-  //data = updateActivityUserGeneratedContent(ENV_CONFIG.header, data, sheet);
-  // Insert the updated data in the spreadsheet at once
-  if (data.updated) insertData(sheet, data.activities, 2, 1);
+function updateActivities(config, sheet) {
+  if(config.updateActivities) {
+    console.info('Updating activities...');
+    var data = {activities : getActivities(sheet)};
+    
+    // List with updates of data
+    data = updateActivityLocation(config.header, data, sheet);
+    data = updateActivityUserGeneratedContent(config.header, data, sheet);
+    // Insert the updated data in the spreadsheet at once
+    if (data.updated) insertData(sheet, data.activities, 2, 1);
+  } else {
+    console.warn('Skipped updating activities, was disabled in config.');
+  }
   
 }
 
@@ -187,7 +187,7 @@ function getStravaItems(endPoint, lastActivityDate) {
 function callStrava(endPoint, params){
   var baseUrl = 'https://www.strava.com/api/v3/';
   var url = baseUrl + endPoint + params;
-  var service = getService_();
+  var service = getStravaService();
 
   // Check if the authorisation is working
   if (service.hasAccess()) {
@@ -206,12 +206,14 @@ function callStrava(endPoint, params){
   } else {
     var authorizationUrl = service.getAuthorizationUrl();
     // Log error to default logger
-    Logger.log('Authorization failed: open %s to authorize and re-run the script.',
+    Logger.log('Authorization failed! Open the following URL to authorize and re-run the script: %s',
     authorizationUrl);
     
     // Log error to Stackdriver logger
-    console.error('Authorization failed: open %s to authorize and re-run the script.',
-        authorizationUrl);
+    console.error('Authorization failed! Open the following URL to authorize and re-run the script: %s',
+    authorizationUrl);
+
+    //throw new Error('Authorization failed! Open the following URL to authorize and re-run the script: %s', authorizationUrl);
   }
 }
 
@@ -269,7 +271,7 @@ function setEnvConfig(mode){
  * Returns the sheet defined in the config
  */
 function getSheet(sheetName, header) {
-  var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(spreadsheet, sheetName);
   ensureHeader(header, sheet);
   return sheet;  
@@ -291,22 +293,24 @@ function getOrCreateSheet(spreadsheet, sheetName) {
  * Checks for a header and create one if not available
  */
 function ensureHeader(header, sheet) {
-  // Only add the header if sheet is empty
-  var headerString = JSON.stringify(header);
-  var sheetHeaderString = JSON.stringify(getSheetHeader(sheet)[0]);
-
-  if (sheet.getLastRow() == 0) {
-    console.warn('Found no header, added header.');
-    sheet.appendRow(header);
-  } else if (sheetHeaderString != headerString) {
-    insertData(sheet, [header], 1 , 1);
-    console.warn({'message' : 'Found incorrect header in the sheet, updated header.', 
-                  'header' : header});
+  // If there is a header
+  if (sheet.getLastRow() > 0){
+    // Get the values from the sheet and the config file
+    var headerString = JSON.stringify(header);
+    var sheetHeaderString = JSON.stringify(getSheetHeader(sheet)[0]);
+    // Compare the header from the sheet with the config
+    if (sheetHeaderString != headerString) {
+      insertData(sheet, [header], 1 , 1);
+      console.warn({'message' : 'Found incorrect header in the sheet, updated header.', 
+                    'header' : header});
     } else {
       console.log('Found correct header in the sheet.');
     }
+  } else {
+      console.warn('Found no header, added header.');
+      sheet.appendRow(header);
+  }
 }
-
 /**
  * Returns the date of the last entry in unixTime.
  */
