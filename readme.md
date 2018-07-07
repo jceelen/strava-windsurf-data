@@ -12,9 +12,11 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 
 ## Wanted features ##
  * Change to spreadsheet [add-on](https://developers.google.com/apps-script/add-ons/) for more users.
+    * Refactor
     * Authorization for strava in pop-ups instead of sidebar
     * Call script from menu
     * Remove Sheet1 if empty
+    * Store clientID & clientSecret in script properties
     * Update logging
  * Markup: 
     * autoResizeColumns(startColumn, numColumns)
@@ -27,6 +29,11 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
  * Add switches for data updates in config
  * Add charts
  * Add link to strava
+ * Add strava data:
+    * List: 
+        * elapsed_time (in seconds)
+    * Activity?
+        * athlete_count
  * Improve speed/performance of updateActivityUserGeneratedContent()
  * Rename activities to sessions in code (activities are Strava, sessions this script uses sessions)
  * Update getStravaItems() to support other items (the loop is specifically for activities)
