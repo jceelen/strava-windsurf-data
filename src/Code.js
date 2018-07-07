@@ -71,6 +71,7 @@ function updateActivityUserGeneratedContent(header, data, sheet) {
   var activities = data.activities;
   var stravaIdIndex = header.indexOf('Strava ID');
   var nameIndex = header.indexOf('Name');
+  var friendsIndex = header.indexOf('Friends');
   var descriptionIndex = header.indexOf('Description');
   var updatedActivities = 0;
   
@@ -85,6 +86,7 @@ function updateActivityUserGeneratedContent(header, data, sheet) {
     
     // Adding name and description to the dataset
     activities[i][nameIndex] = activity.name;
+    activities[i][friendsIndex] = activity.athlete_count;
     activities[i][descriptionIndex] = activity.description;
     data.updated = true;
     updatedActivities++;
@@ -240,6 +242,7 @@ function prepareActivities(items) {
                   items[i].id,
                   items[i].name,
                   items[i].distance/1000,
+                  items[i].elapsed_time,
                   items[i].average_speed/0.27777777777778,
                   items[i].max_speed/0.27777777777778,
                   start_lat,
@@ -300,8 +303,9 @@ function ensureHeader(header, sheet) {
     var sheetHeaderString = JSON.stringify(getSheetHeader(sheet)[0]);
     // Compare the header from the sheet with the config
     if (sheetHeaderString != headerString) {
+      sheet.clear();
       insertData(sheet, [header], 1 , 1);
-      console.warn({'message' : 'Found incorrect header in the sheet, updated header.', 
+      console.warn({'message' : 'Found incorrect header, cleared sheet and updated header.', 
                     'header' : header});
     } else {
       console.log('Found correct header in the sheet.');
