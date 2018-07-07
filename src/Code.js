@@ -276,6 +276,7 @@ function setEnvConfig(mode){
 function getSheet(sheetName, header) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(spreadsheet, sheetName);
+  removeUnusedSheet(spreadsheet);
   ensureHeader(header, sheet);
   return sheet;  
 }
@@ -290,6 +291,14 @@ function getOrCreateSheet(spreadsheet, sheetName) {
   }
   console.log('Returned the sheet: ' + sheetName);
   return sheet;
+}
+
+/**
+ * Removes a sheet called Sheet1 
+ */
+function removeUnusedSheet(spreadsheet) {
+  var sheet = spreadsheet.getSheetByName('Sheet1');
+  if(sheet.getLastRow() == 0) spreadsheet.deleteSheet(sheet);
 }
 
 /**
