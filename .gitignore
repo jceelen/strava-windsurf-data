@@ -28,7 +28,5 @@ Temporary Items
 .apdisk
 
 # Config Files
-conf.js
-conf.gs
-*.config.json
-data_sample.json
+Conf.js
+.clasp.json
