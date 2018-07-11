@@ -11,11 +11,18 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 * Keeps updating user generated content from Strava like activity name and description
 
 ## Wanted features ##
+  * Add wind:
+    * [World Weather Online](https://www.worldweatheronline.com)
+    * [Apixu](https://www.apixu.com/my/)
+    * [KNMI (Dutch)](https://www.knmi.nl/kennis-en-datacentrum/achtergrond/data-ophalen-vanuit-een-script)
+    * [KNMI Noordzee Stations (Dutch)](https://www.knmi.nl/nederland-nu/klimatologie/daggegevens_Noordzee)
+    * [Surfcheck EU&NL](http://weerlive.nl/delen.php)
+    * [RijksWaterStaat (Dutch)](https://www.rijkswaterstaat.nl/rws/opendata/)
  * Change to spreadsheet [add-on](https://developers.google.com/apps-script/add-ons/) for more users.
-    * Remove Sheet1 if empty
     * Store clientID & clientSecret in script properties?
     * Cleanup Callback.html
     * Update logging
+    * Add simple dashboard page
  * Markup: 
     * autoResizeColumns(startColumn, numColumns)
     * setFrozenRows(rows)
@@ -24,20 +31,17 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
     * Alignment
     * Check locale settings
  * Use [toast](https://developers.google.com/apps-script/reference/spreadsheet/spreadsheet#toast) messages to update the user about the proces.
+ * Update Strava with data from this sheet.
  * Start using the [Import/Export REST API](https://developers.google.com/apps-script/guides/import-export) for importing and exporting projects 
  * Add switches for data updates in config
  * Add charts
- * Add link to strava
+ * Add link to strava activity
  * Improve speed/performance of updateActivityUserGeneratedContent()
  * Rename activities to sessions in code (activities are Strava, sessions this script uses sessions)
  * Update getStravaItems() to support other items (the loop is specifically for activities)
  * Conversion from city to spot
- * Add wind:
-    * [World Weather Online](https://www.worldweatheronline.com)
-    * [Apixu](https://www.apixu.com/my/)
-    * [KNMI (Dutch)](https://www.knmi.nl/kennis-en-datacentrum/achtergrond/data-ophalen-vanuit-een-script)
-    * [KNMI Noordzee Stations (Dutch)](https://www.knmi.nl/nederland-nu/klimatologie/daggegevens_Noordzee)
-    * [Surfcheck EU&NL](http://weerlive.nl/delen.php)
-    * [RijksWaterStaat (Dutch)](https://www.rijkswaterstaat.nl/rws/opendata/)
  * Add tides
  * Add current(tidal) directions
+
+
+## Notes

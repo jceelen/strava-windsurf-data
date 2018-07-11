@@ -12,22 +12,22 @@ function main(mode) {
   // Check status of sheet (header etc)
   var sheet = getSheet(ENV_CONFIG.sheetName, ENV_CONFIG.header);
 
-  // Subprocess retrieves a list of activities and filters them
+  // Retrieves a list of activities from strava, filters them and store them as sessions
   retrieveNewActivities(sheet);
   
-  // Update existing activities with extra data
-  updateActivities(ENV_CONFIG, sheet);
+  // Update existing sessions with extra data
+  updateSessions(ENV_CONFIG, sheet);
 }
 
 /**
  * Retrieves new activities from strava
  */
 function retrieveNewActivities(sheet) {
-  console.info('Checking for new activities...');
+  console.info('Checking for new activities on Strava...');
   //Access the right sheet and get the date from the last entry
   var endPoint = 'athlete/activities';
-  var lastActivityDate = retrieveLastDate(sheet);
-  var items = getStravaItems(endPoint, lastActivityDate,sheet);
+  var lastSessionDate = retrieveLastDate(sheet);
+  var items = getStravaItems(endPoint, lastSessionDate,sheet);
   var activities = [];
 
   if (items.length > 0) {
@@ -43,96 +43,142 @@ function retrieveNewActivities(sheet) {
     var column = 1;
     insertData(sheet, activities, row, column);
   } else {console.info('No new windsurf activities found in Strava activities.');}
+  console.info('Finished checking for new activities on Strava.');
 }
 
 /**
- * Loops through the sheet with activities and updates/enriches data
+ * Loops through the sheet with sessions and updates/enriches data
  */
-function updateActivities(config, sheet) {
-  if(config.updateActivities) {
-    console.info('Updating activities...');
-    var data = {activities : getActivities(sheet)};
+function updateSessions(config, sheet) {
+  if(config.updateSessions.enabled) {
+    console.info('Updating sessions...');
+    var header = config.header;
+    var updateSessions = config.updateSessions;
+    var data = {sessions : getSessions(sheet)};
     
     // List with updates of data
-    data = updateActivityLocation(config.header, data, sheet);
-    data = updateActivityUserGeneratedContent(config.header, data, sheet);
+    data = updateSessionLocation(updateSessions, header, data);
+    data = updateSessionUserGeneratedContent(updateSessions, header, data);
+    data = updateSessionKnmiData(updateSessions, header, data);
+
     // Insert the updated data in the spreadsheet at once
-    if (data.updated) insertData(sheet, data.activities, 2, 1);
+    if (data.updated) insertData(sheet, data.sessions, 2, 1);
+    console.info('Finished updating sessions.');
   } else {
-    console.warn('Skipped updating activities, was disabled in config.');
+    console.warn('Skipped updating sessions, was disabled in config.');
   }
-  
 }
 
 /**
- * Updates the activities array with the description from Strava
+ * Updates the sessions array with the description from Strava
  */
-function updateActivityUserGeneratedContent(header, data, sheet) {
-  var activities = data.activities;
-  var stravaIdIndex = header.indexOf('Strava ID');
-  var nameIndex = header.indexOf('Name');
-  var friendsIndex = header.indexOf('Friends');
-  var descriptionIndex = header.indexOf('Description');
-  var updatedActivities = 0;
-  
-  var label = 'For Loop';
-  console.time(label);
-
-  for (var i = 0; i < activities.length; i++) {
+function updateSessionUserGeneratedContent(updateSessions, header, data) {
+  if(updateSessions.userGeneratedContent){
+    var sessions = data.sessions;
+    var stravaIdIndex = header.indexOf('Strava ID');
+    var nameIndex = header.indexOf('Name');
+    var friendsIndex = header.indexOf('Friends');
+    var descriptionIndex = header.indexOf('Description');
+    var updatedSessions = 0;
     
-    var endPoint = 'activities/' + activities[i][stravaIdIndex];
-    var params = '?include_all_efforts';
-    var activity = getStravaItem(endPoint, params);
+    var label = 'For Loop';
+    console.time(label);
     
-    // Adding name and description to the dataset
-    activities[i][nameIndex] = activity.name;
-    activities[i][friendsIndex] = activity.athlete_count;
-    activities[i][descriptionIndex] = activity.description;
-    data.updated = true;
-    updatedActivities++;
+    for (var i = 0; i < sessions.length; i++) {
+      
+      var endPoint = 'activities/' + sessions[i][stravaIdIndex];
+      var params = '?include_all_efforts';
+      var activity = getStravaItem(endPoint, params);
+      
+      // Adding name and description to the dataset
+      sessions[i][nameIndex] = activity.name;
+      sessions[i][friendsIndex] = activity.athlete_count;
+      sessions[i][descriptionIndex] = activity.description;
+      data.updated = true;
+      updatedSessions++;
+    }
+    console.timeEnd(label);
+    console.log('Updated user generated content in %s sessions.', updatedSessions);
+  } else {
+    console.warn('Skipped updating user generated content, was disabled in config.');
   }
-  console.timeEnd(label);
-  console.log('Updated user generated content in %s activities.', updatedActivities);
   return data;
 }
 
 /**
- * Updates the activities array with City and Country
+ * Updates the sessions array with City and Country
  */
-function updateActivityLocation(header, data){
-  var activities = data.activities;
-  var cityIndex = header.indexOf('City');
-  var countryIndex = header.indexOf('Country');
-  var latIndex = header.indexOf('Latitude');
-  var lngIndex = header.indexOf('Longitude');
-  var updatedActivities = 0;
-  
-  // Loop through the data and check for missing cities and countries
-  for (var i = 0; i < activities.length; i++) {
-    if(!activities[i][cityIndex]||!activities[i][countryIndex]) {
-      if (activities[i][latIndex] && activities[i][lngIndex]) {
-        address_components = getLocation(activities[i][latIndex], activities[i][lngIndex]);      
-        
-        // Adding the city and country to the dataset
-        activities[i][cityIndex] = extractFromAdress(address_components, 'locality');
-        activities[i][countryIndex] = extractFromAdress(address_components, 'country');
-        data.updated = true;
-        updatedActivities++;
-      } else {
-        var row = i + 2;
-        console.warn({'message' : 'Skipped activity on row '+ row +' because lat and lng are missing.', 
-                     'activity' : activities[i]});
+function updateSessionLocation(updateSessions, header, data){
+  if(updateSessions.location) {
+
+    var sessions = data.sessions;
+    var cityIndex = header.indexOf('City');
+    var countryIndex = header.indexOf('Country');
+    var latIndex = header.indexOf('Latitude');
+    var lngIndex = header.indexOf('Longitude');
+    var updatedSessions = 0;
+    
+    // Loop through the data and check for missing cities and countries
+    for (var i = 0; i < sessions.length; i++) {
+      if(!sessions[i][cityIndex]||!sessions[i][countryIndex]) {
+        if (sessions[i][latIndex] && sessions[i][lngIndex]) {
+          address_components = getLocation(sessions[i][latIndex], sessions[i][lngIndex]);      
+          
+          // Adding the city and country to the dataset
+          sessions[i][cityIndex] = extractFromAdress(address_components, 'locality');
+          sessions[i][countryIndex] = extractFromAdress(address_components, 'country');
+          data.updated = true;
+          updatedSessions++;
+        } else {
+          var row = i + 2;
+          console.warn({'message' : 'Skipped activity on row '+ row +' because lat and lng are missing.', 
+          'activity' : sessions[i]});
+        }
       }
     }
+    console.log('Updated city and country in %s sessions.', updatedSessions);
+  } else {
+    console.warn('Skipped updating session locations, was disabled in config.');
   }
-  console.log('Updated city and country in %s activities.', updatedActivities);
+  return data;
+  }
+
+/**
+ * Updates the sessions array with the description from Strava
+ */
+function updateSessionKnmiData(updateSessions, header, data) {
+  if(updateSessions.knmi){
+    var sessions = data.sessions;
+    var stravaIdIndex = header.indexOf('Strava ID');
+    var nameIndex = header.indexOf('Name');
+    var friendsIndex = header.indexOf('Friends');
+    var descriptionIndex = header.indexOf('Description');
+    var updatedSessions = 0;
+
+    for (var i = 0; i < sessions.length; i++) {
+      
+      var endPoint = 'activities/' + sessions[i][stravaIdIndex];
+      var params = '?include_all_efforts';
+      var activity = getStravaItem(endPoint, params);
+      
+      // Adding name and description to the dataset
+      sessions[i][nameIndex] = activity.name;
+      sessions[i][friendsIndex] = activity.athlete_count;
+      sessions[i][descriptionIndex] = activity.description;
+      data.updated = true;
+      updatedSessions++;
+    }
+    console.log('Updated KNMI data in %s sessions.', updatedSessions);
+  } else {
+    console.warn('Skipped updating KNMI data, was disabled in config.');
+  }
   return data;
 }
 
 /**
- * Returns all activities in the sheet
+ * Returns all sessions in the sheet
  */
-function getActivities(sheet){
+function getSessions(sheet){
 
   // Set variables for range
   var startRow = 2; // Skipping the header
@@ -141,11 +187,11 @@ function getActivities(sheet){
   var numColumns = sheet.getLastColumn(); // Last column
   var dataRange = sheet.getRange(startRow, startColumn, numRows, numColumns);
   
-  var activities = dataRange.getValues();
-  console.log({'message': 'Returned ' + activities.length + ' activities from ' + sheet.getName() + '.', 
-  'activities': activities});
+  var sessions = dataRange.getValues();
+  console.log({'message': 'Returned ' + sessions.length + ' sessions from ' + sheet.getName() + '.', 
+  'sessions': sessions});
   
-  return activities;
+  return sessions;
 }
 
 /**
@@ -161,7 +207,7 @@ function getStravaItem(endPoint, params) {
  * Condition: no call should be made if the activity date of the last
  * call (stored as property) is the same or before the current last activity
  */
-function getStravaItems(endPoint, lastActivityDate) {
+function getStravaItems(endPoint, lastSessionDate) {
   var per_page = 30;
   var page = 1;
   var result = [];
@@ -169,7 +215,7 @@ function getStravaItems(endPoint, lastActivityDate) {
 
   // Create params and make the strava call
   do {
-    var params = '?after=' + lastActivityDate + '&per_page=' + per_page + '&page=' + page;
+    var params = '?after=' + lastSessionDate + '&per_page=' + per_page + '&page=' + page;
     result = callStrava(endPoint, params, page);
 
     // Add the data to the array items
@@ -220,7 +266,7 @@ function callStrava(endPoint, params){
 }
 
 /**
- * Returns an array of items filterd for windsurf activities converted and formated to insert in the sheet
+ * Returns an array of items filtered for windsurf activities converted and formated to insert in the sheet
  */
 function prepareActivities(items) {
   var activities = [];
@@ -264,7 +310,7 @@ function setEnvConfig(mode){
   } else {
     environment = 'prod';
   }
-  var config = ENV_SETTINGS[0][environment];
+  var config = ENV_SETTINGS[environment];
   console.log({'message': 'Loaded configuration settings for ' + environment + '.', 
                 'ENV_CONFIG': config});
   return config;
@@ -298,7 +344,7 @@ function getOrCreateSheet(spreadsheet, sheetName) {
  */
 function removeUnusedSheet(spreadsheet) {
   var sheet = spreadsheet.getSheetByName('Sheet1');
-  if(sheet.getLastRow() == 0) spreadsheet.deleteSheet(sheet);
+  if(sheet && sheet.getLastRow() == 0) spreadsheet.deleteSheet(sheet);
 }
 
 /**
