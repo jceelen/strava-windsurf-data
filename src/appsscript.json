@@ -5,6 +5,11 @@
       "userSymbol": "OAuth2",
       "libraryId": "1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF",
       "version": "26"
+    },
+    {
+      "userSymbol": "ArrayLib",
+      "libraryId": "MOHgh9lncF2UxY-NXF58v3eVJ5jnXUK_T",
+      "version": "23"
     }]
   },
   "exceptionLogging": "STACKDRIVER"

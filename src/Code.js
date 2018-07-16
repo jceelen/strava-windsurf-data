@@ -64,7 +64,7 @@ function updateSessions(sheet, config) {
     data = updateSessionKnmiData(updateSessions, header, data);
 
     // Insert the updated data in the spreadsheet at once
-    //if (data.updated) insertData(sheet, data.sessions, 2, 1, config);
+    if (data.updated) insertData(sheet, data.sessions, 2, 1, config);
     console.info('Finished updating sessions.');
   } else {
     console.warn('Skipped updating sessions, was disabled in config.');
@@ -176,29 +176,26 @@ function updateSessionKnmiData(updateSessions, header, data) {
         // Check if the City is in the spotlist
         if (spotlistArray.indexOf(city)) {
           // Get the station ID for the spot
-          console.log('Found %s of session %s.', city, sessions[i][1]);
+          //WIP console.log('Found %s of session %s.', city, sessions[i][2]);
           var knmiStn = getStationID(SPOTS, city);
           // Get the data
           if (knmiStn){
             var knmiData = getKnmiData(sessions[i], knmiStn, startDateIndex, durationIndex);
-            console.log({'message' : 'Returned data from KNMI.', 'knmiData' : knmiData});
-            return data;
+            //WIP console.log({'message' : 'Returned data from KNMI.', 'knmiData' : knmiData});
             // Add the weather data to the dataset
-            /**
-             sessions[i][avgWindIndex] = knmiData.avgWind;
-             sessions[i][avgGustsIndex] = knmiData.avgGusts;
-             sessions[i][strongestGustIndex] = knmiData.strongestGust;
-             sessions[i][avgWindDirIndex] = knmiData.avgWindDir;
-             sessions[i][avgTempIndex] = knmiData.avgTemp;
-             data.updated = true;
-             updatedSessions++;
-             */
+            sessions[i][avgWindIndex] = knmiData.avgWind;
+            sessions[i][avgGustsIndex] = knmiData.avgGusts;
+            //sessions[i][strongestGustIndex] = knmiData.strongestGust;
+            sessions[i][avgWindDirIndex] = knmiData.avgWindDir;
+            //sessions[i][avgTempIndex] = knmiData.avgTemp;
+            data.updated = true;
+            updatedSessions++;
           } 
         }
       }
     }
     if (updatedSessions > 0) {
-      console.log('Updated KNMI data in %s sessions.', updatedSessions);
+      console.log({'message': 'Updated KNMI data in '+updatedSessions+' sessions.', 'data' : data});
     } else {
       console.log('Skipped updating weatherdata, nothing to update.');
     }

@@ -20,7 +20,10 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
     * Get data with caching
     * Manipulate data
     * Insert in sheet
+    * Fix errors for data that is not available like T on IJmuiden
   * v0.2 
+    * Insert max values (is now NaN because of strings in array)
+    * Exclude bad weatherstations
     * Match weather station based on lat/long
 * Add wind / weatherdata:
   * [World Weather Online](https://www.worldweatheronline.com)
@@ -55,6 +58,6 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
   * Fix performance or load: Timeout: https://www.strava.com/api/v3/activities/1211919367?include_all_efforts at callStrava(Strava:58)
     * Fix that script finishes if there is a time-out
     * Maybe split up the calls? 10 rows, 10 rows etc?
-  * Les times updating markup
+  * Less often updating markup
 
 ## Notes

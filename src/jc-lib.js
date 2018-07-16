@@ -141,13 +141,14 @@ function insertData(sheet, data, row, column) {
 }
 
 function markupData(sheet, config) {
-    if (config.markupData) {
+    if (config.markupdata) {
         var lastRow = sheet.getLastRow();
         var lastColumn = sheet.getLastColumn();
         var range = sheet.getRange(1, 1, lastRow, lastColumn);
         freezeRowsColumns(sheet, config.frozenRows, config.frozenColumns);
         range.setFontSize(config.fontSize);
         setColumnMarkup(sheet, config.columns, lastRow);
+        console.log('Finished updating markup.');
     }
 }
 
