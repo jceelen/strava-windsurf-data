@@ -22,11 +22,11 @@ function setEnvConfig(mode) {
 /**
  * Returns the sheet defined in the config
  */
-function getSheet(config) {
+function getSheet(config, header) {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = getOrCreateSheet(spreadsheet, config.sheetName);
     removeUnusedSheet(spreadsheet, 'Sheet1');
-    ensureHeader(config, sheet);
+    ensureHeader(config, sheet, header);
     return sheet;
 }
 /**
@@ -53,8 +53,7 @@ function removeUnusedSheet(spreadsheet, sheetname) {
 /**
  * Checks for a header and create one if not available
  */
-function ensureHeader(config, sheet) {
-    var header = getHeader(config.columns);
+function ensureHeader(config, sheet, header) {
     // If there is a header
     if (sheet.getLastRow() > 0) {
         // Get the values from the sheet and the config file
@@ -140,8 +139,12 @@ function insertData(sheet, data, row, column) {
     console.info('Inserted %s data records into %s', data.length, sheet.getName());
 }
 
-function markupData(sheet, config) {
+/**
+ * Updates all markup options from settins
+ */
+function markupData(config, sheet) {
     if (config.markupdata) {
+        console.info('Updating markup...');
         var lastRow = sheet.getLastRow();
         var lastColumn = sheet.getLastColumn();
         var range = sheet.getRange(1, 1, lastRow, lastColumn);
@@ -152,37 +155,51 @@ function markupData(sheet, config) {
     }
 }
 
+/**
+ * Updates all per-column-markup options from settings
+ */
 function setColumnMarkup(sheet, columns, lastRow) {
+    var markupLog = [];
     for (var i in columns) {
-        var range;
+        var range; 
         var row;
         var column = columns[i].position;
         if (columns[i].align) {
             row = 1; // only the header
             range = sheet.getRange(row, column);
             range.setHorizontalAlignment(columns[i].align);
-            console.log('Setting alignment to %s for %s', columns[i].align, columns[i].name);
+            logMessage = 'Setting alignment to '+columns[i].align+' for '+columns[i].name+'.';
+            markupLog.push(logMessage);
         }
         if (columns[i].numberFormat) {
             row = 2; // skipping the header
             range = sheet.getRange(row, column, lastRow);
             range.setNumberFormat(columns[i].numberFormat);
-            console.log('Setting numberFormat to %s for %s', columns[i].numberFormat, columns[i].name);
+            logMessage = 'Setting format to '+columns[i].numberFormat+' for '+columns[i].name+'.';
+            markupLog.push(logMessage);
         }
         if (columns[i].size) {
             sheet.setColumnWidth(column, columns[i].size);
-            console.log('Setting column width to %s for %s', columns[i].size, columns[i].name);
+            logMessage = 'Setting column width to '+columns[i].size+' for '+columns[i].name+'.';
+            markupLog.push(logMessage);
         } else {
             sheet.autoResizeColumn(column);
-            console.log('Setting column width automatically for %s', columns[i].name);
+            logMessage = 'Setting column width automatically for '+columns[i].name+'.';
+            markupLog.push(logMessage);
         }
         if (columns[i].wrap) {
             row = 2; // skipping the header
             range = sheet.getRange(row, column, lastRow);
-            range.setHorizontalAlignment(columns[i].align);
-            console.log('Setting alignment to %s for %s', columns[i].align, columns[i].name);
+            var wrap = columns[i].wrap;
+            range.setWrapStrategy(SpreadsheetApp.WrapStrategy[wrap]);
+            logMessage = 'Setting wrap to '+columns[i].wrap+' for '+columns[i].name+'.';
+            markupLog.push(logMessage);
         }
     }
+    console.log({
+        'message': 'Updated column markup.',
+        'markupLog': markupLog
+    });
 }
 
 /**
@@ -201,7 +218,7 @@ function sortData(sheet) {
 /**
  * Gets the address of the Lat Long location.
  */
-function getLocation(lat, lng) {
+function getLocation( useCache, lat, lng) {
     // Check if location is already cached
     var cache = CacheService.getScriptCache();
     var cached = JSON.parse(cache.get('location-for-lat-' + lat + '-lng-' + lng));

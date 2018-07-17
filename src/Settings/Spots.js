@@ -14,6 +14,7 @@ var SPOTS = [{
     locality: 'IJmuiden',
     knmiStn: 225
   },
+  /**
   {
     spotname: 'Strand Horst',
     locality: 'Harderwijk',
@@ -23,4 +24,5 @@ var SPOTS = [{
     spotname: 'Muiderberg',
     locality: 'Muiderberg',
     knmiStn: null
-  }];
+  } */
+];

@@ -15,11 +15,11 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 ## Wanted features ##
 * WIP: Add wind / weatherdata: [KNMI (Dutch)](https://www.knmi.nl/kennis-en-datacentrum/achtergrond/data-ophalen-vanuit-een-script)
   * v0.1 
-    * Select station based on spots JSON
-    * Check if data is present
+    * √ Select station based on spots JSON
     * Get data with caching
-    * Manipulate data
-    * Insert in sheet
+    * Only update if data is present
+    * √ Manipulate data
+    * √ Insert in sheet
     * Fix errors for data that is not available like T on IJmuiden
   * v0.2 
     * Insert max values (is now NaN because of strings in array)
@@ -55,9 +55,12 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
   * setColumnMarkup(): use arrays to update a bunch of cells instead of 1 cell at the time
   * getLocation(): tidy up the for loop and caching.
   * update data: get indexes from `config.columns`
+  * config.columns as an array of dictionaries (not an array with a dictionary of dictionaries)
+  * rename config and settings for more uniformity
   * Fix performance or load: Timeout: https://www.strava.com/api/v3/activities/1211919367?include_all_efforts at callStrava(Strava:58)
     * Fix that script finishes if there is a time-out
     * Maybe split up the calls? 10 rows, 10 rows etc?
   * Less often updating markup
+  * update UGC less often instead of cache
 
 ## Notes

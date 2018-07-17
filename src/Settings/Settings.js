@@ -1,5 +1,40 @@
+// Configure different environments
+var ENV_SETTINGS = {
+  test: {
+    envName: 'test',
+    sheetName: 'Sessions[T]',
+    frozenRows: 1,
+    frozenColumns: 1,
+    updateStrava: false,
+    useCache : true,
+    updateSessions: {
+      enabled: false,
+      location: true,
+      userGeneratedContent: true,
+      knmi: true
+    },
+    markupdata : true
+  },
+  prod: {
+    envName: 'prod',
+    sheetName: 'Sessions',
+    frozenRows: 1,
+    frozenColumns: 1,
+    updateStrava: true,
+    useCache : true,
+    updateSessions: {
+      enabled: true,
+      location: true,
+      userGeneratedContent: true,
+      knmi: false
+    },
+    markupdata : true
+  }
+};
+
 var SETTINGS = {
     fontSize: 9,
+    rowHeight : 21,
     frozenRows: 1,
     frozenColumns: 1,
     columns: {
@@ -70,7 +105,7 @@ var SETTINGS = {
         name: 'Description',
         align: 'left',
         size: 70,
-        wrapping: 'clip'
+        wrap: 'CLIP'
       },
       14: {
         position: 14,
@@ -105,34 +140,4 @@ var SETTINGS = {
     }
   };
   
-  // Configure different environments
-  var ENV_SETTINGS = {
-    test: {
-      envName: 'test',
-      sheetName: 'Sessions[T]',
-      frozenRows: 1,
-      frozenColumns: 1,
-      updateStrava: false,
-      updateSessions: {
-        enabled: true,
-        location: true,
-        userGeneratedContent: false,
-        knmi: true
-      },
-      markupdata : true
-    },
-    prod: {
-      envName: 'prod',
-      sheetName: 'Sessions',
-      frozenRows: 1,
-      frozenColumns: 1,
-      updateStrava: true,
-      updateSessions: {
-        enabled: true,
-        location: true,
-        userGeneratedContent: true,
-        knmi: false
-      },
-      markupdata : true
-    }
-  };
+  

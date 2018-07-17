@@ -1,40 +1,36 @@
 /**
  * Gets data from KNMI weather API for specific session
  */
-function getKnmiData(session, knmiStn, startDateIndex, durationIndex) {
-    var params = getKnmiParams(session[startDateIndex], session[durationIndex]);
-    var result = callKnmi(params.start, params.end, knmiStn);
-    var weatherData = processKnmiData(result);
-    var calculatedData = getCalculatedData(weatherData);
+function getKnmiData(useCache, session, knmiStn, IdIndex, startDateIndex, durationIndex) {
+    var stravaId = session[IdIndex];
+    var payload = getKnmiPayload(session, knmiStn, startDateIndex, durationIndex, stravaId);
+    var result = callKnmi(useCache, payload, stravaId);
+    var weatherData = processKnmiData(result, stravaId);
+    var calculatedData = getCalculatedData(weatherData, stravaId);
     var knmiData = {
         avgWind: dmsToKts(calculatedData.FH.average),
-        avgGusts : dmsToKts(calculatedData.FX.average),
+        avgGusts: dmsToKts(calculatedData.FX.average),
         //strongestGust : calculatedData[0].FX.max
-        avgWindDir : calculatedData.DD.average,
+        avgWindDir: calculatedData.DD.average,
         //avgTemp : calculatedData.T.average
     };
     return knmiData;
 }
 
-function getKnmiParams(start, duration) {
-    var params = {};
-    var startDate = new Date((start || '').replace(/-/g, '/').replace(/[TZ]/g, ' '));
-    var endDate = new Date(startDate.getTime() + duration * 1000);
-
-    params.start = '' + startDate.getFullYear() + ('0' + (startDate.getMonth() + 1)).slice(-2) + ('0' + startDate.getDate()).slice(-2) + startDate.getHours();
-    params.end = '' + endDate.getFullYear() + ('0' + (endDate.getMonth() + 1)).slice(-2) + ('0' + endDate.getDate()).slice(-2) + endDate.getHours();
-
-    console.log('Returned params: start %s and end %s.', params.start, params.end);
-    return params;
-}
-
 /**
  * Posts the request to the KNMI service
  */
-function callKnmi(start, end, station) {
+function callKnmi(useCache, payload, stravaId) {
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get(payload);
+    if (cached != null && useCache) {
+        console.log({
+            'message': 'Retrieved KNMI data from cache for ' + stravaId + '.',
+            'data': data
+        });
+        return cached;
+    }
     var postUrl = 'http://projects.knmi.nl/klimatologie/uurgegevens/getdata_uur.cgi';
-    var payload = getKnmiPayload(start, end, station);
-
     var params = {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -43,20 +39,33 @@ function callKnmi(start, end, station) {
         payload: payload,
         muteHttpExceptions: true
     };
-
+    
     var response = UrlFetchApp.fetch(postUrl, params);
     var data = response.getContentText();
+    cache.put(payload, data, 21600);
     console.log({
-        'message': 'Retrieved data from KNMI',
+        'message': 'Retrieved KNMI data from webservice for ' + stravaId + '.',
         'data': data
     });
     return data;
 }
 
-function getKnmiPayload(start, end, station) {
+function getKnmiPayload(session, station, startDateIndex, durationIndex, stravaId) {
+    // Prepare the start of the session
+    var start = session[startDateIndex];
+    var startDate = new Date((start || '').replace(/-/g, '/').replace(/[TZ]/g, ' '));
+    start = '' + startDate.getFullYear() + ('0' + (startDate.getMonth() + 1)).slice(-2) + ('0' + startDate.getDate()).slice(-2) + startDate.getHours();
+
+    // Prepare the end of the session
+    var duration = session[durationIndex];
+    var endDate = new Date(startDate.getTime() + duration * 1000);
+    var end = '' + endDate.getFullYear() + ('0' + (endDate.getMonth() + 1)).slice(-2) + ('0' + endDate.getDate()).slice(-2) + endDate.getHours();
+
+    // Create the payload
     var payload = 'start=' + start + '&end=' + end + '&vars=ALL&stns=' + station;
+
     console.log({
-        'message': 'Returned payload for KNMI call',
+        'message': 'Returned payload for KNMI call for ' + stravaId + '.',
         'payload': payload
     });
     return payload;
@@ -67,7 +76,7 @@ function getKnmiPayload(start, end, station) {
  * Returns an array of data from the result of the KNMI call
  */
 
-function processKnmiData(knmiData) {
+function processKnmiData(knmiData, stravaId) {
     var weatherData = [];
     // default header with all variables
     var header = ['STN', 'YYYYMMDD', 'HH', 'DD', 'FH', 'FF', 'FX', 'T', 'T10', 'TD', 'SQ', 'Q', 'DR', 'RH', 'P', 'VV', 'N', 'U', 'WW', 'IX', 'M', 'R', 'S', 'O', 'Y'];
@@ -92,7 +101,7 @@ function processKnmiData(knmiData) {
     // remove spaces and tabs from result
     weatherData = cleanWeatherData(weatherData);
     console.log({
-        'message': 'Returned array with weather data',
+        'message': 'Returned array with weather data for ' + stravaId + '.',
         'array': weatherData
     });
     return weatherData;
@@ -105,7 +114,7 @@ function getStationID(SPOTS, city) {
     for (var i = 0; i < SPOTS.length; i++) {
         if (SPOTS[i].locality == city) {
             if (SPOTS[i].knmiStn == null) {
-                console.log('No station id found for %s.', city);
+                console.warn('No station id found for %s.', city);
             } else {
                 console.log('Returned station id %s for %s.', SPOTS[i].knmiStn, city);
                 return SPOTS[i].knmiStn;
@@ -117,7 +126,7 @@ function getStationID(SPOTS, city) {
 /**
  * Returns avarage of a column in a 2 dimensional array
  */
-function getCalculatedData(weatherData) {
+function getCalculatedData(weatherData, stravaId) {
     var calculatedData = getWeatherTypes(weatherData);
 
     // skip the STN, Date and Hour and loop through the other items
@@ -137,7 +146,7 @@ function getCalculatedData(weatherData) {
         //if(!isNaN(max)) calculatedData[0][weatherCondition].max = max;
     }
     console.log({
-        'message': 'Returned calculated weather data.',
+        'message': 'Returned calculated weather data for ' + stravaId + '.',
         'calculatedData': calculatedData[0]
     });
 
@@ -165,8 +174,8 @@ function getWeatherTypes(dataArray) {
         'averages': calculatedData
     });
     return calculatedData;
-}   
+}
 
 function dmsToKts(ms) {
-    return ms*0.194384449;
+    return ms * 0.194384449;
 }
