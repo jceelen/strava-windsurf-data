@@ -14,15 +14,34 @@ var SPOTS = [{
     locality: 'IJmuiden',
     knmiStn: 225
   },
-  /**
   {
     spotname: 'Strand Horst',
     locality: 'Harderwijk',
-    knmiStn: null
+    knmiStn: 269
+  },
+  {
+    spotname: 'Strand Horst',
+    locality: 'Ermelo',
+    knmiStn: 269
+  },
+  {
+    spotname: 'Strand Horst',
+    locality: 'Zeewolde',
+    knmiStn: 269
   },
   {
     spotname: 'Muiderberg',
     locality: 'Muiderberg',
-    knmiStn: null
-  } */
+    knmiStn: 269
+  },
+  {
+    spotname: 'Makkum',
+    locality: 'Makkum',
+    knmiStn: 267
+  },  
+  {
+    spotname: 'Ameland - Nes',
+    locality: 'Nes',
+    knmiStn: 267
+  }  
 ];

@@ -167,7 +167,6 @@ function updateSessionLocation(updateSessions, useCache, header, data) {
 function updateSessionKnmiData(updateSessions, useCache, header, data) {
   if (updateSessions.knmi) {
     var sessions = data.sessions;
-    var IdIndex = header.indexOf('Strava ID');
     var countryIndex = header.indexOf('Country');
     var cityIndex = header.indexOf('City');
     var startDateIndex = header.indexOf('Start Date');
@@ -184,24 +183,27 @@ function updateSessionKnmiData(updateSessions, useCache, header, data) {
     for (var i = 0; i < sessions.length; i++) {
       // Check if the country is NL
       if (sessions[i][countryIndex] == 'Netherlands' && sessions[i][avgWindIndex] == '') {
+        var row = String(i + 2); //add 1 for the header, 1 because of index
         var city = sessions[i][cityIndex];
         // Check if the City is in the spotlist
-        if (spotlist.indexOf(city)) {
+        if (spotlist.indexOf(city) >= 0) {
           // Get the station ID for the spot
-          //WIP console.log('Found %s of session %s.', city, sessions[i][2]);
+          console.log('Found city %s for session on row %s in the spotlist.', city, row);
           var knmiStn = getStationID(SPOTS, city);
           // Get the data
           if (knmiStn){
-            var knmiData = getKnmiData(useCache, sessions[i], knmiStn, IdIndex, startDateIndex, durationIndex);
-            //WIP console.log({'message' : 'Returned data from KNMI.', 'knmiData' : knmiData});
-            // Add the weather data to the dataset
-            sessions[i][avgWindIndex] = knmiData.avgWind;
-            sessions[i][avgGustsIndex] = knmiData.avgGusts;
-            //sessions[i][strongestGustIndex] = knmiData.strongestGust;
-            sessions[i][avgWindDirIndex] = knmiData.avgWindDir;
-            //sessions[i][avgTempIndex] = knmiData.avgTemp;
-            data.updated = true;
-            updatedSessions++;
+            var knmiData = getKnmiData(useCache, row, sessions[i], knmiStn, startDateIndex, durationIndex);
+            if(knmiData != null) {
+              //WIP console.log({'message' : 'Returned data from KNMI.', 'knmiData' : knmiData});
+              // Add the weather data to the dataset
+              sessions[i][avgWindIndex] = knmiData.avgWind;
+              sessions[i][avgGustsIndex] = knmiData.avgGusts;
+              //sessions[i][strongestGustIndex] = knmiData.strongestGust;
+              sessions[i][avgWindDirIndex] = knmiData.avgWindDir;
+              if (knmiData.avgTemp) sessions[i][avgTempIndex] = knmiData.avgTemp;
+              data.updated = true;
+              updatedSessions++;
+            }
           } 
         }
       }

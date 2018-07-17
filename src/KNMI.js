@@ -1,31 +1,34 @@
 /**
  * Gets data from KNMI weather API for specific session
  */
-function getKnmiData(useCache, session, knmiStn, IdIndex, startDateIndex, durationIndex) {
-    var stravaId = session[IdIndex];
-    var payload = getKnmiPayload(session, knmiStn, startDateIndex, durationIndex, stravaId);
-    var result = callKnmi(useCache, payload, stravaId);
-    var weatherData = processKnmiData(result, stravaId);
-    var calculatedData = getCalculatedData(weatherData, stravaId);
-    var knmiData = {
-        avgWind: dmsToKts(calculatedData.FH.average),
-        avgGusts: dmsToKts(calculatedData.FX.average),
-        //strongestGust : calculatedData[0].FX.max
-        avgWindDir: calculatedData.DD.average,
-        //avgTemp : calculatedData.T.average
-    };
-    return knmiData;
+function getKnmiData(useCache, row, session, knmiStn, startDateIndex, durationIndex) {
+    var payload = getKnmiPayload(session, knmiStn, startDateIndex, durationIndex, row);
+    var result = callKnmi(useCache, payload, row);
+    var weatherData = processKnmiData(result, row);
+    if (weatherData == null) {
+        return;
+    } else {
+        var calculatedData = getCalculatedData(weatherData, row);
+
+        var knmiData = {};
+        if (calculatedData.FH) knmiData.avgWind = dmsToKts(calculatedData.FH.average);
+        if (calculatedData.FX) knmiData.avgGusts = dmsToKts(calculatedData.FX.average);
+        if (calculatedData.FX) knmiData.strongestGust = calculatedData.FX.max;
+        if (calculatedData.DD) knmiData.avgWindDir = calculatedData.DD.average;
+        if (calculatedData.T) knmiData.avgTemp = calculatedData.T.average / 10;
+        return knmiData;
+    }
 }
 
 /**
  * Posts the request to the KNMI service
  */
-function callKnmi(useCache, payload, stravaId) {
+function callKnmi(useCache, payload, row) {
     var cache = CacheService.getScriptCache();
     var cached = cache.get(payload);
     if (cached != null && useCache) {
         console.log({
-            'message': 'Retrieved KNMI data from cache for ' + stravaId + '.',
+            'message': 'Retrieved KNMI data from cache for session on row ' + row + '.',
             'data': data
         });
         return cached;
@@ -39,18 +42,18 @@ function callKnmi(useCache, payload, stravaId) {
         payload: payload,
         muteHttpExceptions: true
     };
-    
+
     var response = UrlFetchApp.fetch(postUrl, params);
     var data = response.getContentText();
     cache.put(payload, data, 21600);
     console.log({
-        'message': 'Retrieved KNMI data from webservice for ' + stravaId + '.',
+        'message': 'Retrieved KNMI data from webservice for session on row ' + row + '.',
         'data': data
     });
     return data;
 }
 
-function getKnmiPayload(session, station, startDateIndex, durationIndex, stravaId) {
+function getKnmiPayload(session, station, startDateIndex, durationIndex, row) {
     // Prepare the start of the session
     var start = session[startDateIndex];
     var startDate = new Date((start || '').replace(/-/g, '/').replace(/[TZ]/g, ' '));
@@ -65,7 +68,7 @@ function getKnmiPayload(session, station, startDateIndex, durationIndex, stravaI
     var payload = 'start=' + start + '&end=' + end + '&vars=ALL&stns=' + station;
 
     console.log({
-        'message': 'Returned payload for KNMI call for ' + stravaId + '.',
+        'message': 'Returned payload for KNMI call for session on row ' + row + '.',
         'payload': payload
     });
     return payload;
@@ -76,35 +79,38 @@ function getKnmiPayload(session, station, startDateIndex, durationIndex, stravaI
  * Returns an array of data from the result of the KNMI call
  */
 
-function processKnmiData(knmiData, stravaId) {
+function processKnmiData(knmiData, row) {
     var weatherData = [];
     // default header with all variables
     var header = ['STN', 'YYYYMMDD', 'HH', 'DD', 'FH', 'FF', 'FX', 'T', 'T10', 'TD', 'SQ', 'Q', 'DR', 'RH', 'P', 'VV', 'N', 'U', 'WW', 'IX', 'M', 'R', 'S', 'O', 'Y'];
     // remove comments from result
     knmiData = knmiData.match(/^(?![ \t]*#).+/gm);
+    if (knmiData == null) {
+        console.warn('No weather data found at station for session on row %s.', row);
+    } else {
+        // add default header to array
+        weatherData.push(header);
+        // add the metrcis for each hour in the array
+        for (var i = 0; i < knmiData.length; i++) {
+            // remove all whitespaces and tabs from the string
+            var hourData = knmiData[i].replace(/^\s+|\s+$|\s+/gm, '');
+            // parse the csv as an array
+            hourData = Utilities.parseCsv(hourData);
 
-    // add default header to array
-    weatherData.push(header);
-    // add the metrcis for each hour in the array
-    for (var i = 0; i < knmiData.length; i++) {
-        // remove all whitespaces and tabs from the string
-        var hourData = knmiData[i].replace(/^\s+|\s+$|\s+/gm, '');
-        // parse the csv as an array
-        hourData = Utilities.parseCsv(hourData);
+            // store the hourData array in a new array
+            weatherData.push(hourData[0]);
+        }
 
-        // store the hourData array in a new array
-        weatherData.push(hourData[0]);
+        // switch rows and columns
+        weatherData = ArrayLib.transpose(weatherData);
+        // remove spaces and tabs from result
+        weatherData = cleanWeatherData(weatherData);
+        console.log({
+            'message': 'Returned array with weather data for  session on row ' + row + '.',
+            'array': weatherData
+        });
+        return weatherData;
     }
-
-    // switch rows and columns
-    weatherData = ArrayLib.transpose(weatherData);
-    // remove spaces and tabs from result
-    weatherData = cleanWeatherData(weatherData);
-    console.log({
-        'message': 'Returned array with weather data for ' + stravaId + '.',
-        'array': weatherData
-    });
-    return weatherData;
 }
 
 /**
@@ -126,7 +132,7 @@ function getStationID(SPOTS, city) {
 /**
  * Returns avarage of a column in a 2 dimensional array
  */
-function getCalculatedData(weatherData, stravaId) {
+function getCalculatedData(weatherData, row) {
     var calculatedData = getWeatherTypes(weatherData);
 
     // skip the STN, Date and Hour and loop through the other items
@@ -146,7 +152,7 @@ function getCalculatedData(weatherData, stravaId) {
         //if(!isNaN(max)) calculatedData[0][weatherCondition].max = max;
     }
     console.log({
-        'message': 'Returned calculated weather data for ' + stravaId + '.',
+        'message': 'Returned calculated weather data for  session on row ' + row + '.',
         'calculatedData': calculatedData[0]
     });
 

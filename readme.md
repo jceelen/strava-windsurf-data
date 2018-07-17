@@ -10,21 +10,15 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 * Gets all activities from Strava, filters them for `windsurfing` and adds them to a sheet.
 * Keeps updating user generated content from Strava like activity name and description
 * Adds location based on start lat/long
-* 
+* Adds dutch weather data based on `Settings/Spots.js`
 
 ## Wanted features ##
-* WIP: Add wind / weatherdata: [KNMI (Dutch)](https://www.knmi.nl/kennis-en-datacentrum/achtergrond/data-ophalen-vanuit-een-script)
-  * v0.1 
-    * √ Select station based on spots JSON
-    * Get data with caching
-    * Only update if data is present
-    * √ Manipulate data
-    * √ Insert in sheet
-    * Fix errors for data that is not available like T on IJmuiden
-  * v0.2 
-    * Insert max values (is now NaN because of strings in array)
-    * Exclude bad weatherstations
-    * Match weather station based on lat/long
+* Add simple dashboard sheet
+* Move description to notes on the title: setNotes(notes)
+* Weather Data v0.2 
+  * Insert max values (is now NaN because of strings in array)
+  * Exclude bad weatherstations
+  * Match weather station based on lat/long
 * Add wind / weatherdata:
   * [World Weather Online](https://www.worldweatheronline.com)
   * [Apixu](https://www.apixu.com/my/)
@@ -36,21 +30,16 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
 * Markup v2
   * Banding
 * Update logging
-* Add simple dashboard sheet
 * Use [toast](https://developers.google.com/apps-script/reference/spreadsheet/spreadsheet#toast) messages to update the user about the proces.
 * Update Strava with data from this sheet.
-* Start using the [Import/Export REST API](https://developers.google.com/apps-script/guides/import-export) for importing and exporting projects 
-* Add switches for data updates in config
 * Add charts
 * Add link to strava activity
 * Improve speed/performance of updateActivityUserGeneratedContent()
-* Rename activities to sessions in code (activities are Strava, sessions this script uses sessions)
-* Update getStravaItems() to support other items (the loop is specifically for activities)
 * Conversion from city to spot
+* Duration in hours and minutes
 * Add tides
 * Add current(tidal) directions
-* Duration in hours and minutes
-* Move description to notes on the title: setNotes(notes)
+* Update getStravaItems() to support other items (the loop is specifically for activities)
 * Refactor:
   * setColumnMarkup(): use arrays to update a bunch of cells instead of 1 cell at the time
   * getLocation(): tidy up the for loop and caching.
@@ -64,3 +53,5 @@ Standalone Script for that pulls your windsurfing activities from Strava. The id
   * update UGC less often instead of cache
 
 ## Notes
+Locations of all weatherstations are shown on [this map](https://drive.google.com/open?id=1PG4BRaTaKF29wiSQLdLeamFvhpNWq8V7&usp=sharing).
+Documentation for [KNMI (Dutch)](https://www.knmi.nl/kennis-en-datacentrum/achtergrond/data-ophalen-vanuit-een-script) weatherdata.

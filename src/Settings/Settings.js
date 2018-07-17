@@ -8,9 +8,9 @@ var ENV_SETTINGS = {
     updateStrava: false,
     useCache : true,
     updateSessions: {
-      enabled: false,
-      location: true,
-      userGeneratedContent: true,
+      enabled: true,
+      location: false,
+      userGeneratedContent: false,
       knmi: true
     },
     markupdata : true
@@ -26,7 +26,7 @@ var ENV_SETTINGS = {
       enabled: true,
       location: true,
       userGeneratedContent: true,
-      knmi: false
+      knmi: true
     },
     markupdata : true
   }
@@ -46,7 +46,8 @@ var SETTINGS = {
       2: {
         position: 2,
         name: 'Strava ID',
-        align: 'right'
+        align: 'right',
+        numberFormat: '#'
       },
       3: {
         position: 3,
@@ -57,23 +58,25 @@ var SETTINGS = {
         position: 4,
         name: 'Distance',
         align: 'right',
-        numberFormat: '#.##'
+        numberFormat: '# \"km\"'
       },
       5: {
         position: 5,
         name: 'Duration',
-        align: 'right'
+        align: 'right',
+        numberFormat: '# \"s\"'
       },
       6: {
         position: 6,
         name: 'Average Speed',
         align: 'right',
-        numberFormat: '#.##'
+        numberFormat: '#.# \"km/h\"'
       },
       7: {
         position: 7,
         name: 'Max Speed',
-        align: 'right'
+        align: 'right',
+        numberFormat: '#.# \"km/h\"'
       },
       8: {
         position: 8,
@@ -111,31 +114,31 @@ var SETTINGS = {
         position: 14,
         name: 'Avg Wind',
         align: 'right',
-        numberFormat: '#.#'
+        numberFormat: '# \"kts\"'
       },
       15: {
         position: 15,
         name: 'Avg Gusts',
         align: 'right',
-        numberFormat: '#.#'
+        numberFormat: '# \"kts\"'
       },
       16: {
         position: 16,
         name: 'Strongest Gust',
         align: 'right',
-        numberFormat: '#.#'
+        numberFormat: '# \"kts\"'
       },
       17: {
         position: 17,
         name: 'Avg Wind Dir',
         align: 'right',
-        numberFormat: '#'      
+        numberFormat: '# \"°\"'
       },
       18: {
         position: 18,
         name: 'Avg Temp',
         align: 'right',
-        numberFormat: '#'
+        numberFormat: '# \"°C\"'
       },
     }
   };
