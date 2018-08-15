@@ -1,0 +1,24 @@
+{
+  "name": "strava-windsurf-data",
+  "version": "1.0.0",
+  "description": "Standalone Script for that pulls your windsurfing activities from Strava. The idea is to add extra data like wind / weather / tidal data and represent them on a dashboard.",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "gas-lib": "^2.0.2",
+    "jshint": "^2.9.6"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://jceelen@github.com/jceelen/strava-windsurf-data.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jceelen/strava-windsurf-data/issues"
+  },
+  "homepage": "https://github.com/jceelen/strava-windsurf-data#readme"
+}
